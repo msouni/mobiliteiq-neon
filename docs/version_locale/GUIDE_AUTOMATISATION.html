@@ -1,0 +1,69 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MobilitéIQ — Automatisation</title><style>body{font:17px/1.65 Segoe UI,sans-serif;color:#163042;background:#eef4f6;margin:0}main{max-width:980px;margin:40px auto;background:white;padding:45px;border-radius:16px}h1,h2{color:#087f86}h2{border-top:1px solid #c9dee0;padding-top:25px}pre{background:#123244;color:#e8f8fa;padding:18px;overflow:auto;border-radius:8px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccdde0;padding:10px;text-align:left}th{background:#e8f4f4}code{font-family:Consolas,monospace}@media(max-width:700px){main{margin:0;padding:20px}}</style><main><h1>Démarrer MobilitéIQ en trois étapes</h1>
+<h2>1. Préparer</h2>
+<p>Installez et démarrez Docker Desktop avec les conteneurs Linux. Extrayez le projet dans un nouveau dossier. Ouvrez PowerShell dans ce dossier.</p>
+<pre><code class="language-powershell">Copy-Item .env.example .env
+notepad .env
+</code></pre>
+<p>Remplacez PGPASSWORD par un mot de passe local. Évitez <code>$</code> dans le mot de passe pour éviter l'interpolation Compose. Les paramètres PGHOST de cet exemple servent à l'exécution Python locale; Compose utilise automatiquement le service <code>db</code>. Si le port 5432 est déjà occupé, ajoutez <code>DB_PORT=5433</code> dans .env; Power BI devra alors utiliser localhost:5433.</p>
+<h2>2. Démarrer les quatre ingestions</h2>
+<pre><code class="language-powershell">docker compose up -d --build
+docker compose ps
+docker compose logs -f --tail 100 ingestion
+</code></pre>
+<p>Le premier démarrage télécharge les dépendances et crée une nouvelle base dans un volume Docker. Il ne migre pas votre ancienne base WSL. Les quatre collectes commencent immédiatement, dans l'ordre RTSS, débit, météo, travaux. Elles sont séquentielles pour éviter la surcharge et les conflits de publication. Ctrl+C ferme le suivi des journaux; les services continuent à fonctionner.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Fréquence après réussite</th>
+<th>Après échec</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Travaux</td>
+<td>60 minutes</td>
+<td>5 minutes</td>
+</tr>
+<tr>
+<td>Météo</td>
+<td>60 minutes</td>
+<td>5 minutes</td>
+</tr>
+<tr>
+<td>Débit DJMA</td>
+<td>1 jour</td>
+<td>5 minutes</td>
+</tr>
+<tr>
+<td>Réseau RTSS</td>
+<td>1 jour</td>
+<td>5 minutes</td>
+</tr>
+</tbody>
+</table>
+<p>La boucle vérifie le calendrier toutes les 60 secondes après chaque cycle. Les temps de téléchargement et de traitement peuvent décaler les échéances. Modifiez config/sources.json puis reconstruisez le service pour changer les fréquences.</p>
+<p>La validation automatique remplace l'ancien <code>validated: true</code> à saisir manuellement : chaque réponse doit être GeoJSON, les champs configurés doivent être présents, les coordonnées et les valeurs doivent être valides. Un taux de rejet supérieur à 10 % bloque la publication; un lot non vide présentant au plus 10 % de rejets peut publier ses lignes valides. Un lot vide est accepté seulement pour les travaux. Aucun champ inconnu n'est deviné : un changement de schéma nécessite de corriger la configuration. Le brut et les rejets sont conservés.</p>
+<p>Le calendrier est persistant en base. Après redémarrage, seules les sources arrivées à échéance sont collectées. Les anciens traitements interrompus sont marqués en échec. Un verrou PostgreSQL évite deux traitements simultanés, y compris avec la commande manuelle <code>run</code>.</p>
+<p>Pour un démarrage après redémarrage du PC, activez le démarrage de Docker Desktop à l'ouverture de session. La politique <code>unless-stopped</code> redémarre les services avec Docker, sauf s'ils ont été arrêtés explicitement. Pour du fonctionnement 24 h/24, installez le projet sur un serveur toujours allumé. Les périodes éteintes ne permettent pas de reconstruire les anciens états des travaux.</p>
+<h2>3. Vérifier et consulter</h2>
+<pre><code class="language-powershell">docker compose exec db psql -U mobiliteiq -d mobiliteiq -c &quot;SELECT * FROM bi.etat_sources;&quot;
+docker compose exec db psql -U mobiliteiq -d mobiliteiq -c &quot;SELECT * FROM bi.ops_alertes;&quot;
+</code></pre>
+<p>Chaque source doit finir par avoir une réussite. <code>derniere_tentative_utc</code>, <code>derniere_reussite_utc</code>, le statut, les rejets et l'erreur distinguent les pannes des données valides. Les indicateurs de fraîcheur sont réévalués à chaque cycle. Le retard réel des observations météo est aussi surveillé. Les alertes sont accessibles en base et dans les journaux; aucun message externe n'est envoyé.</p>
+<p>Dans Power BI, connectez PostgreSQL sur <code>localhost:5432</code>, base <code>mobiliteiq</code>, utilisateur <code>mobiliteiq</code>, avec le mot de passe de .env. Consultez <code>bi.etat_sources</code>, <code>bi.observations_courantes</code>, <code>bi.fact_entraves</code> et <code>bi.fact_secteur_heure</code>. Cette dernière reste ancrée sur l'instantané travaux; une météo arrivée ensuite ne s'y rattache qu'au prochain instantané travaux.</p>
+<p>L'ingestion et les vues PostgreSQL se mettent à jour automatiquement. Un rapport Power BI en mode Import conserve ses données jusqu'à son actualisation : configurez son actualisation planifiée et la passerelle si le service doit joindre votre base locale, ou un mode DirectQuery compatible avec votre rapport. Aucun PBIX ou compte Power BI n'est configuré par ce paquet.</p>
+<h3>Maintenance</h3>
+<ul>
+<li>Arrêter : <code>docker compose stop</code>.</li>
+<li>Reprendre : <code>docker compose up -d</code>.</li>
+<li>Mettre à jour le code : <code>docker compose up -d --build</code>.</li>
+<li>Surveiller les erreurs : <code>docker compose logs --tail 200 ingestion</code>.</li>
+<li>Ne pas utiliser <code>docker compose down -v</code> : cette option supprime les volumes de données.</li>
+<li>Le mot de passe de création PostgreSQL n'est appliqué qu'à l'initialisation du volume; changer .env ne modifie pas le compte d'une base déjà créée.</li>
+<li>Les journaux Docker sont limités à trois fichiers de 10 Mo. L'historique SQL et le brut ne sont pas purgés automatiquement; surveillez l'espace et sauvegardez les volumes.</li>
+</ul>
+<h3>Sans Docker, avec votre PostgreSQL existant</h3>
+<p>Installez requirements.txt dans un environnement Python, renseignez .env pour votre serveur, puis lancez <code>python -m mobiliteiq serve</code>. Gardez ce processus supervisé par votre gestionnaire de services. Ne lancez plus l'ancienne tâche planifiée en parallèle. La commande <code>run</code> reste disponible pour une collecte ponctuelle. Le modèle ML conserve son entraînement manuel; cette évolution automatise les ingestions, les agrégats et les indicateurs.</p>
+<h3>Validation de cette livraison</h3>
+<p>Voir docs/VALIDATION_AUTOMATISATION.md. Une validation locale des tests n'est pas une preuve que les services distants sont disponibles ni que la collecte est déjà déployée chez vous.</p></main></html>

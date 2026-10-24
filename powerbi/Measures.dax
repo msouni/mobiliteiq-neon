@@ -1,0 +1,16 @@
+// Créer une mesure à la fois. DAX ci-dessous utilise les virgules comme séparateurs.
+// Si Power BI exige le format local français, remplacer les séparateurs d'arguments par ;.
+Entraves présentes = DISTINCTCOUNT(fact_entraves[event_id])
+
+Dernière collecte UTC = MAX(fact_entraves[collecte_utc])
+
+Nouvelles observées 24 h =
+VAR Derniere = MAX(fact_entraves[collecte_utc])
+RETURN CALCULATE(DISTINCTCOUNT(fact_entraves[event_id]), fact_entraves[premiere_observation_utc] >= Derniere - 1)
+
+Moyenne entraves par secteur-heure = AVERAGE(fact_secteur_heure[n_presentes])
+
+Secteurs-heures inhabituels =
+CALCULATE(COUNTROWS(fact_secteur_heure), fact_secteur_heure[anomaly] = TRUE(), fact_secteur_heure[phase] = "evaluation_ou_nouveau")
+
+Alertes de qualité = COUNTROWS(ops_alertes)

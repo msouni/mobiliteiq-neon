@@ -1,0 +1,55 @@
+name: Collecte Neon
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Recollecter les quatre sources immédiatement'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: mobiliteiq-neon-production
+  cancel-in-progress: false
+jobs:
+  collecte:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: ${{ secrets.NEON_DATABASE_URL }}
+      PYTHONUNBUFFERED: '1'
+      FORCE_COLLECTION: ${{ inputs.force || 'false' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Vérifier le secret sans l'afficher
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo 'Configurer le secret NEON_DATABASE_URL dans les paramètres du dépôt.'
+            exit 1
+          fi
+      - name: Vérifier la connexion
+        run: python -m mobiliteiq check-db
+      - name: Collecter les sources à échéance
+        shell: bash
+        run: |
+          if [ "$FORCE_COLLECTION" = "true" ]; then
+            python -m mobiliteiq run --force
+          else
+            python -m mobiliteiq run
+          fi
+      - name: Archiver les réponses brutes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: brut-${{ github.run_id }}-${{ github.run_attempt }}
+          path: data/
+          retention-days: 1
+          if-no-files-found: ignore

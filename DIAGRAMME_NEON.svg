@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 570" role="img" aria-labelledby="title desc">
+<title id="title">Le pipeline MobilitéIQ avec Neon</title><desc id="desc">Les cinq membres publient le code sur GitHub. GitHub Actions lance Python qui collecte les sources, alimente Neon et archive le brut. Power BI relit les vues de Neon.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#247a87"/></marker></defs>
+<rect width="1000" height="570" rx="18" fill="#eff6f8"/>
+<g fill="none" stroke="#247a87" stroke-width="3" marker-end="url(#arrow)">
+<path d="M300 80 H365"/><path d="M635 80 H700"/>
+<path d="M835 135 V175 H500 V215"/>
+<path d="M300 270 H365"/><path d="M635 270 H700"/>
+<path d="M500 325 V405"/><path d="M835 325 V405"/>
+</g>
+<g stroke="#c8dfe5" stroke-width="2">
+<rect x="30" y="25" width="270" height="110" rx="12" fill="white"/>
+<rect x="365" y="25" width="270" height="110" rx="12" fill="white"/>
+<rect x="700" y="25" width="270" height="110" rx="12" fill="#e0f5ef"/>
+<rect x="30" y="215" width="270" height="110" rx="12" fill="white"/>
+<rect x="365" y="215" width="270" height="110" rx="12" fill="#123d52"/>
+<rect x="700" y="215" width="270" height="110" rx="12" fill="#d7f2ed"/>
+<rect x="365" y="405" width="270" height="110" rx="12" fill="white"/>
+<rect x="700" y="405" width="270" height="110" rx="12" fill="#fff1cf"/>
+</g>
+<g font-family="Segoe UI, sans-serif" fill="#14384c" text-anchor="middle">
+<text x="165" y="64" font-size="22" font-weight="700">Votre équipe de 5</text><text x="165" y="94" font-size="17">VS Code + WSL</text><text x="165" y="117" font-size="16">Développe et relit le code</text>
+<text x="500" y="64" font-size="22" font-weight="700">GitHub commun</text><text x="500" y="94" font-size="17">Code et tests</text><text x="500" y="117" font-size="16">Une version partagée</text>
+<text x="835" y="64" font-size="22" font-weight="700">GitHub Actions</text><text x="835" y="94" font-size="17">Déclenchement horaire</text><text x="835" y="117" font-size="16">Fonctionne sans vos PC</text>
+<text x="165" y="254" font-size="22" font-weight="700">Sources publiques</text><text x="165" y="284" font-size="17">Travaux · Météo</text><text x="165" y="307" font-size="16">Débit · Réseau routier</text>
+<text x="500" y="254" font-size="22" font-weight="700" fill="white">Programme Python</text><text x="500" y="284" font-size="17" fill="white">Télécharge et contrôle</text><text x="500" y="307" font-size="16" fill="white">Prépare les données</text>
+<text x="835" y="254" font-size="22" font-weight="700">PostgreSQL Neon</text><text x="835" y="284" font-size="17">Base commune en ligne</text><text x="835" y="307" font-size="16">Historique + vues BI</text>
+<text x="500" y="444" font-size="22" font-weight="700">Archives brutes</text><text x="500" y="474" font-size="17">Artifacts GitHub</text><text x="500" y="497" font-size="16">Conservation : 1 jour</text>
+<text x="835" y="444" font-size="22" font-weight="700">Power BI</text><text x="835" y="474" font-size="17">Relit les vues de Neon</text><text x="835" y="497" font-size="16">Actualisation distincte</text>
+<text x="835" y="371" font-size="15">Connexion sécurisée / lecture seule</text>
+<text x="500" y="548" font-size="15">La base est dans le cloud. WSL sert au développement et aux essais.</text>
+</g></svg>

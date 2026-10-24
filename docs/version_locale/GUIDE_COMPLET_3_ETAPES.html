@@ -1,0 +1,568 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MobilitéIQ — Guide complet en 3 étapes</title><style>*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#eef4f6;color:#183445;font:16px/1.7 "Segoe UI",sans-serif}header{background:#123449;color:white;padding:32px max(24px,calc((100vw - 1060px)/2))}header small{color:#7fe0d7;letter-spacing:2px}header strong{display:block;font-size:30px}nav{background:white;border-bottom:1px solid #cbdfe4;padding:12px 22px;position:sticky;top:0;z-index:2}nav ul{list-style:none;display:flex;justify-content:center;gap:24px;padding:0;margin:0}nav a{font-size:14px;font-weight:600}main{max-width:1060px;margin:30px auto;background:white;border:1px solid #dae5e9;border-radius:12px;padding:45px 50px}h1{font-size:32px;line-height:1.3}h2{margin-top:65px;padding-top:22px;border-top:5px solid #0a9e99;color:#08777d;scroll-margin-top:100px}h3{color:#19586a;margin-top:34px}pre{background:#123449;color:#effbfc;padding:20px;border-radius:8px;overflow-x:auto;line-height:1.55;font-size:14px}code{font-family:Consolas,monospace}p code,li code,td code{background:#edf4f5;padding:2px 4px;border-radius:3px}table{border-collapse:collapse;width:100%;margin:20px 0;font-size:14px}th,td{border:1px solid #d3e1e5;padding:11px;text-align:left;vertical-align:top}th{background:#173f53;color:white}tr:nth-child(even){background:#f1f7f8}a{color:#087786;overflow-wrap:anywhere}@media(max-width:760px){main{margin:0;padding:24px 18px;border:0}nav{position:static}nav ul{display:block}table{display:block;overflow-x:auto}h1{font-size:26px}}@media print{header,nav{display:none}main{margin:0;padding:0;border:0;max-width:none}body{background:white;font-size:10pt}h2{break-before:page}pre{white-space:pre-wrap;background:#f1f4f5;color:#111;border:1px solid #ccd}h3{break-after:avoid}tr{break-inside:avoid}}</style></head><body><header><small>GUIDE COMPLET · VERSION AUTOMATISÉE</small><strong>MobilitéIQ / WSL → Power BI</strong></header><nav><div class="toc">
+<ul>
+<li><a href="#etape-1-preparer-wsl-ouvrir-le-projet-et-collecter">Étape 1 — Préparer WSL, ouvrir le projet et collecter</a></li>
+<li><a href="#etape-2-analyser-les-donnees-et-construire-power-bi">Étape 2 — Analyser les données et construire Power BI</a></li>
+<li><a href="#etape-3-tester-publier-sur-github-et-automatiser">Étape 3 — Tester, publier sur GitHub et automatiser</a></li>
+</ul>
+</div>
+</nav><main><h1 id="mobiliteiq-reproduire-le-projet-de-bout-en-bout-en-3-etapes">MobilitéIQ — reproduire le projet de bout en bout en 3 étapes</h1>
+<p><strong>WSL Ubuntu · VS Code · PostgreSQL · GitHub · Power BI</strong><br />
+Guide du 22 octobre 2026 — version avec quatre ingestions automatiques.</p>
+<p>Ce parcours utilise Python et PostgreSQL directement dans WSL. Docker reste une option du projet, mais n'est pas nécessaire pour suivre ce guide. Les commandes Bash se saisissent dans Ubuntu ou le terminal WSL de VS Code; les commandes PowerShell sont signalées. Les instructions décrivent les opérations à effectuer sur votre poste : elles ne signifient pas que la base, GitHub ou Power BI sont déjà configurés.</p>
+<table>
+<thead>
+<tr>
+<th>Grande étape</th>
+<th>Résultat</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Installer et collecter</td>
+<td>Projet ouvert dans VS Code/WSL, PostgreSQL prêt, quatre sources collectées</td>
+</tr>
+<tr>
+<td>2. Analyser et visualiser</td>
+<td>Analyse, modèle de démonstration et rapport Power BI</td>
+</tr>
+<tr>
+<td>3. Tester et automatiser</td>
+<td>Tests, dépôt GitHub et service permanent dans WSL</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Circuit des données :</strong> sources publiques → collecteurs Python → contrôle qualité et archives brutes → PostgreSQL → vues <code>bi</code> → Power BI. GitHub conserve le code et teste les modifications.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Fréquence après réussite</th>
+<th>Nouvelle tentative après échec</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Travaux routiers</td>
+<td>60 minutes</td>
+<td>5 minutes</td>
+</tr>
+<tr>
+<td>Météo</td>
+<td>60 minutes</td>
+<td>5 minutes</td>
+</tr>
+<tr>
+<td>Débit de circulation</td>
+<td>24 heures</td>
+<td>5 minutes</td>
+</tr>
+<tr>
+<td>Réseau routier RTSS</td>
+<td>24 heures</td>
+<td>5 minutes</td>
+</tr>
+</tbody>
+</table>
+<p>La boucle Python contrôle les échéances toutes les minutes après chaque cycle. Ce sont des intervalles de collecte, pas une garantie de nouvelles publications chez les producteurs. Le périmètre configuré est la région de Québec.</p>
+<h2 id="etape-1-preparer-wsl-ouvrir-le-projet-et-collecter">Étape 1 — Préparer WSL, ouvrir le projet et collecter</h2>
+<h3 id="11-verifier-windows-et-wsl">1.1 Vérifier Windows et WSL</h3>
+<p>Dans <strong>PowerShell Windows</strong> :</p>
+<pre><code class="language-powershell">wsl --list --verbose
+wsl --version
+</code></pre>
+<p>Repérez le nom exact de la distribution, par exemple <code>Ubuntu</code>. Elle doit utiliser WSL 2. Si WSL n'est pas installé, ouvrez PowerShell en administrateur et lancez :</p>
+<pre><code class="language-powershell">wsl --install -d Ubuntu
+</code></pre>
+<p>Redémarrez si demandé, puis ouvrez Ubuntu et terminez la création de votre utilisateur Linux. Si Ubuntu est déjà installé, conservez cette installation. Installez VS Code sous Windows et son extension <strong>WSL</strong> publiée par Microsoft. Installez également Power BI Desktop sous Windows et préparez votre compte GitHub.</p>
+<h3 id="12-placer-le-projet-dans-le-systeme-de-fichiers-linux">1.2 Placer le projet dans le système de fichiers Linux</h3>
+<p>Téléchargez l'archive <code>MobiliteIQ_Automatise.zip</code> jointe à cette livraison. Dans <strong>Ubuntu</strong> :</p>
+<pre><code class="language-bash">mkdir -p ~/MobiliteIQ-Lab
+cd ~/MobiliteIQ-Lab
+explorer.exe .
+</code></pre>
+<p>Copiez le ZIP dans la fenêtre ouverte. Revenez dans Ubuntu :</p>
+<pre><code class="language-bash">sudo apt update
+sudo apt install -y python3 python3-venv python3-pip postgresql postgresql-client unzip git
+unzip MobiliteIQ_Automatise.zip
+cd MobiliteIQ_Automatise
+code .
+</code></pre>
+<p>Si le dossier existe déjà, extrayez dans un nouveau dossier pour conserver votre travail. Le chemin attendu est <code>~/MobiliteIQ-Lab/MobiliteIQ_Automatise</code>. Les commandes suivantes supposent ce chemin.</p>
+<p>Dans VS Code, le coin inférieur gauche doit indiquer <strong>WSL: Ubuntu</strong>. Ouvrez <strong>Terminal → New Terminal</strong>, puis :</p>
+<pre><code class="language-bash">pwd
+python3 --version
+git --version
+</code></pre>
+<p><strong>Point de contrôle :</strong> le terminal affiche un chemin Linux sous <code>/home/…</code>, et le dossier contient <code>mobiliteiq</code>, <code>config</code>, <code>sql</code>, <code>tests</code> et <code>.github</code>.</p>
+<h3 id="13-activer-systemd-et-postgresql">1.3 Activer systemd et PostgreSQL</h3>
+<p>Dans Ubuntu :</p>
+<pre><code class="language-bash">ps -p 1 -o comm=
+</code></pre>
+<p>Si le résultat est <code>systemd</code>, poursuivez. Sinon, ouvrez :</p>
+<pre><code class="language-bash">sudo nano /etc/wsl.conf
+</code></pre>
+<p>Ajoutez ou adaptez la section suivante en conservant les autres paramètres du fichier :</p>
+<pre><code class="language-ini">[boot]
+systemd=true
+</code></pre>
+<p>Enregistrez avec Ctrl+O, Entrée, puis Ctrl+X. Fermez votre travail WSL. Dans <strong>PowerShell</strong>, la commande suivante arrête toutes les distributions WSL :</p>
+<pre><code class="language-powershell">wsl --shutdown
+</code></pre>
+<p>Rouvrez Ubuntu, puis le projet avec <code>code .</code> depuis son dossier. Dans Ubuntu :</p>
+<pre><code class="language-bash">sudo systemctl enable --now postgresql
+pg_isready -h localhost -p 5432
+sudo -u postgres psql -c '\du'
+sudo -u postgres psql -c '\l'
+</code></pre>
+<p>Le service doit accepter les connexions. Si systemd reste indisponible, vérifiez la version de WSL et sa configuration avant l'étape 3. La procédure suit la <a href="https://learn.microsoft.com/en-us/windows/wsl/systemd">documentation Microsoft sur systemd dans WSL</a>.</p>
+<h3 id="14-creer-le-compte-et-les-trois-bases">1.4 Créer le compte et les trois bases</h3>
+<p>Exécutez la création uniquement si le compte et les bases ne figurent pas dans les listes précédentes :</p>
+<pre><code class="language-bash">sudo -u postgres createuser --login --pwprompt mobiliteiq
+sudo -u postgres createdb --owner=mobiliteiq mobiliteiq
+sudo -u postgres createdb --owner=mobiliteiq mobiliteiq_demo
+sudo -u postgres createdb --owner=mobiliteiq mobiliteiq_test
+</code></pre>
+<p>Choisissez un mot de passe local. La saisie du mot de passe peut rester invisible.</p>
+<table>
+<thead>
+<tr>
+<th>Base</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mobiliteiq</td>
+<td>Données réelles et historique</td>
+</tr>
+<tr>
+<td>mobiliteiq_demo</td>
+<td>Données synthétiques pour apprendre et construire le rapport</td>
+</tr>
+<tr>
+<td>mobiliteiq_test</td>
+<td>Base jetable : les tests y effacent leurs tables</td>
+</tr>
+</tbody>
+</table>
+<p>Vérifiez :</p>
+<pre><code class="language-bash">psql -h localhost -U mobiliteiq -d mobiliteiq -W -c 'SELECT current_database(), current_user;'
+</code></pre>
+<p>Le résultat doit indiquer <code>mobiliteiq</code> pour la base et l'utilisateur.</p>
+<h3 id="15-installer-python-et-renseigner-la-configuration">1.5 Installer Python et renseigner la configuration</h3>
+<p>Dans le terminal WSL de VS Code, à la racine du projet :</p>
+<pre><code class="language-bash">python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+cp .env.example .env
+code .env
+</code></pre>
+<p>Ne recopiez pas <code>.env.example</code> sur un <code>.env</code> déjà renseigné. Dans <code>.env</code>, utilisez :</p>
+<pre><code class="language-ini">PGHOST=localhost
+PGPORT=5432
+PGUSER=mobiliteiq
+PGPASSWORD=REMPLACER_PAR_VOTRE_MOT_DE_PASSE
+PGDATABASE=mobiliteiq
+</code></pre>
+<p>Remplacez le mot de passe, sans ajouter de guillemets. Le programme lit ce fichier; il n'est pas nécessaire de l'exécuter comme un script. Puis :</p>
+<pre><code class="language-bash">chmod 600 .env
+python -m mobiliteiq init-db
+python -m mobiliteiq --db mobiliteiq_demo init-db
+python -m mobiliteiq --db mobiliteiq_test init-db
+python -m pytest tests/test_core.py tests/test_scheduler.py -q
+</code></pre>
+<p><strong>Point de contrôle :</strong> les tables sont prêtes et les tests unitaires passent. Dans chaque nouveau terminal, revenez dans le projet et réactivez <code>.venv</code>.</p>
+<h3 id="16-examiner-les-sources-et-lancer-la-premiere-collecte">1.6 Examiner les sources et lancer la première collecte</h3>
+<pre><code class="language-bash">python -m mobiliteiq audit
+code data/audit.json
+code config/sources.json
+</code></pre>
+<p>L'audit télécharge les données et montre les champs disponibles; il ne remplit pas les tables analytiques. Vérifiez les quatre sections : <code>travaux</code>, <code>debit</code>, <code>rtss</code>, <code>meteo</code>. Une erreur de service doit être examinée avant de poursuivre.</p>
+<p>La configuration livrée utilise <code>validation_mode: automatic</code>. Ne remplacez pas les champs au hasard et ne passez pas les anciens indicateurs <code>validated</code> à <code>true</code> pour contourner une erreur. Chaque lot est contrôlé au moment de son ingestion. Les dates, coordonnées, identifiants et champs attendus sont vérifiés. Plus de 10 % de rejets bloque la publication; les lots partiellement valides sous ce seuil peuvent publier leurs lignes acceptées. Une source vide n'est acceptée que pour les travaux.</p>
+<p>Lancez la collecte réelle :</p>
+<pre><code class="language-bash">python -m mobiliteiq run --force
+psql -h localhost -U mobiliteiq -d mobiliteiq -W -c 'SELECT * FROM bi.etat_sources;'
+psql -h localhost -U mobiliteiq -d mobiliteiq -W -c 'SELECT source,count(*) FROM bi.observations_courantes GROUP BY source;'
+</code></pre>
+<p>Les quatre tentatives doivent être visibles. Cherchez une réussite pour chacune; des travaux absents du territoire peuvent produire un lot réussi vide. Une collecte échouée garde le dernier lot valide. Les archives sont dans <code>data/raw</code>, les rejets dans <code>bi.ops_rejets</code> et les erreurs dans <code>bi.ops_ingestions</code>.</p>
+<p><strong>Fin de l'étape 1 :</strong> votre installation lit les quatre sources et écrit dans PostgreSQL. Conservez une capture de l'état des sources, sans afficher <code>.env</code>.</p>
+<h2 id="etape-2-analyser-les-donnees-et-construire-power-bi">Étape 2 — Analyser les données et construire Power BI</h2>
+<h3 id="21-comprendre-les-vues-disponibles">2.1 Comprendre les vues disponibles</h3>
+<table>
+<thead>
+<tr>
+<th>Vue PostgreSQL</th>
+<th>Utilité</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bi.info_projet</td>
+<td>Identifier la base et le mode réel ou démo</td>
+</tr>
+<tr>
+<td>bi.etat_sources</td>
+<td>Dernière tentative, dernière réussite et erreurs des quatre sources</td>
+</tr>
+<tr>
+<td>bi.observations_courantes</td>
+<td>Dernier lot valide de chaque source</td>
+</tr>
+<tr>
+<td>bi.fact_entraves</td>
+<td>Travaux présents dans le dernier extrait réussi</td>
+</tr>
+<tr>
+<td>bi.historique_entraves</td>
+<td>Première et dernière présence observées</td>
+</tr>
+<tr>
+<td>bi.fact_secteur_heure</td>
+<td>Agrégats horaires et scores lorsqu'ils existent</td>
+</tr>
+<tr>
+<td>bi.dim_date / bi.dim_secteur</td>
+<td>Dimensions pour les filtres</td>
+</tr>
+<tr>
+<td>bi.ops_alertes</td>
+<td>Indicateurs actuellement en alerte</td>
+</tr>
+</tbody>
+</table>
+<p>Les secteurs sont une grille pédagogique de 0,1 degré, pas des quartiers administratifs. Le débit est un DJMA de référence, pas une mesure de trafic en direct. Les agrégats sont ancrés sur l'instantané travaux : une nouvelle météo ne s'y rattache qu'au prochain instantané travaux.</p>
+<h3 id="22-preparer-une-demonstration-sans-attendre-lhistorique-reel">2.2 Préparer une démonstration sans attendre l'historique réel</h3>
+<p>Dans WSL, environnement Python actif :</p>
+<pre><code class="language-bash">python -m mobiliteiq --db mobiliteiq_demo demo
+python -m mobiliteiq --db mobiliteiq_demo eda
+python -m mobiliteiq --db mobiliteiq_demo train
+python -m mobiliteiq --db mobiliteiq_demo export
+</code></pre>
+<p>La commande <code>demo</code> crée 30 jours synthétiques et refuse de réinitialiser une démo déjà remplie. Dans ce cas, continuez avec <code>eda</code>, <code>train</code> ou <code>export</code>. N'exécutez jamais <code>demo</code> dans la base réelle.</p>
+<p>Les résultats sont dans <code>exports/mobiliteiq_demo</code> : statistiques, valeurs manquantes, corrélations et exports des vues. Le modèle est enregistré dans <code>models/mobiliteiq_demo</code>. L'entraînement calcule aussi les premiers scores.</p>
+<p>Pour les vraies données, lorsque suffisamment d'historique existe :</p>
+<pre><code class="language-bash">python -m mobiliteiq eda
+python -m mobiliteiq train
+python -m mobiliteiq score
+</code></pre>
+<p>L'entraînement exige au moins 10 jours d'étendue temporelle et 40 heures distinctes, avec des variables exploitables. Une anomalie Isolation Forest signale une situation inhabituelle; elle ne prouve ni congestion ni danger. Il n'existe pas de précision/rappel terrain sans étiquettes validées.</p>
+<p>Les ingestions et agrégats sont automatiques à l'étape 3. L'entraînement et le recalcul des scores restent manuels dans cette version : après de nouvelles collectes, relancez <code>score</code> si vous voulez des scores à jour. Les tableaux de bord opérationnels peuvent fonctionner sans modèle.</p>
+<h3 id="23-verifier-lacces-depuis-windows">2.3 Vérifier l'accès depuis Windows</h3>
+<p>Dans <strong>PowerShell Windows</strong> :</p>
+<pre><code class="language-powershell">Test-NetConnection localhost -Port 5432
+</code></pre>
+<p><code>TcpTestSucceeded</code> doit être vrai. En cas d'échec, vérifiez d'abord <code>pg_isready</code> dans WSL et assurez-vous que le serveur démarre. Si un autre PostgreSQL Windows utilise déjà 5432, identifiez le bon serveur et utilisez un port distinct cohérent dans PostgreSQL, <code>.env</code>, Power BI et les commandes. N'ouvrez pas PostgreSQL à Internet pour contourner le problème.</p>
+<h3 id="24-connecter-power-bi-desktop">2.4 Connecter Power BI Desktop</h3>
+<p>Dans Power BI Desktop sous Windows :</p>
+<ol>
+<li><strong>Home → Get data → More → Database → PostgreSQL database</strong>.</li>
+<li>Serveur : <code>localhost:5432</code>.</li>
+<li>Base : <code>mobiliteiq_demo</code> pour construire la démonstration, ou <code>mobiliteiq</code> pour les données réelles.</li>
+<li>Choisissez <strong>Import</strong> pour commencer.</li>
+<li>Authentification <strong>Database</strong> : utilisateur <code>mobiliteiq</code>, mot de passe de <code>.env</code>.</li>
+<li>Dans <strong>Navigator</strong>, sélectionnez les vues indiquées ci-dessous, puis <strong>Transform Data</strong>.</li>
+</ol>
+<p>Chargez <code>info_projet</code>, <code>etat_sources</code>, <code>fact_entraves</code>, <code>historique_entraves</code>, <code>fact_secteur_heure</code>, <code>dim_date</code>, <code>dim_secteur</code> et <code>ops_alertes</code> du schéma <code>bi</code>. Vous pouvez laisser <code>observations_courantes</code> en SQL : sa colonne JSON est destinée au détail technique.</p>
+<p>Le <a href="https://learn.microsoft.com/power-query/connectors/postgresql">connecteur PostgreSQL officiel</a> décrit les options et prérequis selon votre version de Power BI.</p>
+<h3 id="25-verifier-les-types-et-les-relations">2.5 Vérifier les types et les relations</h3>
+<p>Dans Power Query :</p>
+<ul>
+<li><code>event_id</code>, <code>sector</code>, <code>axe</code> : texte.</li>
+<li><code>latitude</code>, <code>longitude</code>, <code>score</code> et les valeurs météo : nombres décimaux.</li>
+<li><code>n_presentes</code> : entier.</li>
+<li><code>anomaly</code> : vrai/faux.</li>
+<li><code>date_key</code> : date.</li>
+<li>Les heures UTC : date/heure avec fuseau si disponible; conservez des libellés UTC explicites. <code>heure_locale</code> est déjà calculée pour America/Toronto.</li>
+</ul>
+<p>Cliquez <strong>Close &amp; Apply</strong>. Dans <strong>Model view</strong>, créez les relations suivantes, de la dimension vers la table de faits, cardinalité <strong>One to many</strong>, filtre à sens unique :</p>
+<table>
+<thead>
+<tr>
+<th>Dimension</th>
+<th>Table de faits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dim_secteur[sector]</td>
+<td>fact_entraves[sector]</td>
+</tr>
+<tr>
+<td>dim_secteur[sector]</td>
+<td>historique_entraves[sector]</td>
+</tr>
+<tr>
+<td>dim_secteur[sector]</td>
+<td>fact_secteur_heure[sector]</td>
+</tr>
+<tr>
+<td>dim_date[date_key]</td>
+<td>fact_secteur_heure[date_key]</td>
+</tr>
+<tr>
+<td>dim_date[date_key]</td>
+<td>historique_entraves[date_key]</td>
+</tr>
+</tbody>
+</table>
+<p>Évitez les relations automatiques supplémentaires entre les tables de faits. Le filtre de date de l'historique correspond à la première observation; il ne signifie pas « présent à toute date sélectionnée ». Les travaux courants ne sont pas filtrés par date avec ce modèle.</p>
+<h3 id="26-ajouter-les-mesures-et-les-pages">2.6 Ajouter les mesures et les pages</h3>
+<p>Ouvrez <code>powerbi/Measures.dax</code> dans VS Code. Dans Power BI, utilisez <strong>Modeling → New measure</strong> et copiez une mesure à la fois. Conservez les noms de tables attendus dans le fichier. Si votre configuration utilise des points-virgules, adaptez les séparateurs d'arguments.</p>
+<p>Créez trois pages :</p>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Visuels à ajouter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vue opérationnelle</td>
+<td>Cartes Entraves présentes, Dernière collecte UTC et Alertes de qualité; tableau des travaux avec axe et secteur; filtre secteur</td>
+</tr>
+<tr>
+<td>Historique et anomalies</td>
+<td>Courbe par heure locale du nombre d'entraves; tableau secteur, heure, score, anomalie et explication; filtres date et secteur</td>
+</tr>
+<tr>
+<td>Qualité des sources</td>
+<td>Tableau etat_sources avec source, statut, dernière réussite, âge et erreur; tableau ops_alertes</td>
+</tr>
+</tbody>
+</table>
+<p>Pour une carte géographique, définissez les catégories de données latitude et longitude, puis placez les coordonnées de <code>fact_entraves</code> dans un visuel cartographique autorisé par votre organisation. Conservez le tableau si les cartes sont désactivées. Sur la démonstration, ajoutez un titre visible <strong>DONNÉES SYNTHÉTIQUES</strong>.</p>
+<p>Enregistrez le fichier sous <code>MobiliteIQ_Demo.pbix</code> ou <code>MobiliteIQ_Reel.pbix</code>. Pour passer de la démo au réel, faites une copie du PBIX et modifiez la base dans <strong>Transform data → Data source settings → Change Source</strong>, puis actualisez. Les scores peuvent rester vides tant que le modèle réel n'est pas entraîné.</p>
+<h3 id="27-verifier-les-chiffres">2.7 Vérifier les chiffres</h3>
+<p>Dans WSL :</p>
+<pre><code class="language-bash">psql -h localhost -U mobiliteiq -d mobiliteiq_demo -W -c 'SELECT count(DISTINCT event_id) FROM bi.fact_entraves;'
+psql -h localhost -U mobiliteiq -d mobiliteiq_demo -W -c 'SELECT count(*) FROM bi.ops_alertes;'
+</code></pre>
+<p>Comparez avec les cartes Power BI, filtres retirés, après <strong>Home → Refresh</strong>. Changez la base en <code>mobiliteiq</code> pour vérifier le rapport réel. Les alertes d'une démo peuvent refléter ses données statiques : ne les présentez pas comme un état opérationnel réel.</p>
+<p><strong>Fin de l'étape 2 :</strong> le rapport est enregistré, les chiffres correspondent à SQL et la distinction réel/démo est visible.</p>
+<h2 id="etape-3-tester-publier-sur-github-et-automatiser">Étape 3 — Tester, publier sur GitHub et automatiser</h2>
+<h3 id="31-executer-les-tests-complets">3.1 Exécuter les tests complets</h3>
+<p>Dans WSL, à la racine du projet, <code>.venv</code> actif :</p>
+<pre><code class="language-bash">RUN_PG_TESTS=1 python -m pytest -q
+python -m compileall -q mobiliteiq
+</code></pre>
+<p>Les tests utilisent exclusivement <code>mobiliteiq_test</code> et en effacent les tables de travail. <code>.env</code> fournit l'accès au serveur. Ne changez pas leur cible pour utiliser votre base réelle. Si des tests PostgreSQL sont ignorés malgré <code>RUN_PG_TESTS=1</code>, examinez la configuration avant de considérer la validation complète.</p>
+<p>La livraison a été vérifiée localement avec 12 tests réussis et 5 tests PostgreSQL ignorés faute de serveur disponible. Vous devez exécuter ces derniers dans votre installation; ce guide ne prétend pas qu'ils y sont déjà réussis.</p>
+<h3 id="32-publier-le-code-sur-github">3.2 Publier le code sur GitHub</h3>
+<p>Créez sur GitHub un dépôt vide nommé par exemple <code>mobiliteiq</code>, sans README initial. Dans WSL, configurez votre identité Git si nécessaire :</p>
+<pre><code class="language-bash">git config --global user.name &quot;Votre nom&quot;
+git config --global user.email &quot;Votre adresse GitHub ou adresse privée GitHub&quot;
+</code></pre>
+<p>Vérifiez si le dossier est déjà un dépôt avec <code>git status</code>. Pour un dossier qui n'en est pas encore un :</p>
+<pre><code class="language-bash">git init -b main
+git add .
+git diff --cached --stat
+git status
+</code></pre>
+<p>Vérifiez que <code>.env</code>, <code>.venv</code>, les données, modèles et exports sont exclus. <code>.gitignore</code> exclut également les PBIX; le rapport reste local. Pour partager un PBIX, choisissez explicitement un emplacement adapté après contrôle de son contenu.</p>
+<pre><code class="language-bash">git commit -m &quot;MobiliteIQ : quatre ingestions automatiques et guide complet&quot;
+git remote add origin https://github.com/VOTRE_COMPTE/mobiliteiq.git
+git push -u origin main
+</code></pre>
+<p>Remplacez <code>VOTRE_COMPTE</code> avant d'exécuter. Si <code>origin</code> existe déjà, vérifiez-le avec <code>git remote -v</code> au lieu d'en ajouter un autre. Authentifiez-vous avec une méthode prise en charge par GitHub; ne mettez pas de jeton dans l'URL ou dans les fichiers du projet.</p>
+<p>Dans GitHub, ouvrez <strong>Actions</strong>. Le workflow <code>.github/workflows/ci.yml</code> installe Python, démarre un PostgreSQL temporaire et exécute les tests. Attendez la réussite sur le commit publié. Ce PostgreSQL de test n'est pas votre base réelle et GitHub n'effectue pas vos ingestions locales.</p>
+<p>Pour les modifications suivantes :</p>
+<pre><code class="language-bash">git switch -c dev
+# Modifier et tester les fichiers dans VS Code.
+git add .
+git commit -m &quot;Description de la modification&quot;
+git push -u origin dev
+</code></pre>
+<p>Sur GitHub, créez une <strong>Pull request</strong> de <code>dev</code> vers <code>main</code>, attendez les tests puis fusionnez. Revenez ensuite sur <code>main</code> et synchronisez avec <code>git pull --ff-only</code>.</p>
+<h3 id="33-essayer-le-service-automatique-au-premier-plan">3.3 Essayer le service automatique au premier plan</h3>
+<p>Dans WSL :</p>
+<pre><code class="language-bash">python -m mobiliteiq serve
+</code></pre>
+<p>Le service consulte les dates enregistrées dans PostgreSQL. Si vous venez de lancer <code>run</code>, il attend les prochaines échéances; il ne doit pas nécessairement retélécharger immédiatement. Les échecs sont réessayés après cinq minutes. La météo et les travaux reviennent chaque heure, le débit et RTSS chaque jour.</p>
+<p>Dans un second terminal, activez l'environnement et consultez :</p>
+<pre><code class="language-bash">psql -h localhost -U mobiliteiq -d mobiliteiq -W -c 'SELECT * FROM bi.etat_sources;'
+</code></pre>
+<p>Après vérification, arrêtez le service du premier terminal avec Ctrl+C avant de créer le service permanent. Ne lancez pas simultanément Docker, l'ancienne tâche de collecte et ce service WSL. Le verrou en base protège les écritures, mais une seule méthode d'exploitation simplifie le suivi.</p>
+<h3 id="34-creer-le-service-systemd-permanent">3.4 Créer le service systemd permanent</h3>
+<p>Le nom du service dans ce parcours sera <strong>mobiliteiq.service</strong>. Il lance le même programme Python que le service Docker nommé <code>ingestion</code>.</p>
+<p>Dans WSL, depuis le dossier du projet :</p>
+<pre><code class="language-bash">project_dir=$(pwd)
+linux_user=$(id -un)
+sudo tee /etc/systemd/system/mobiliteiq.service &gt; /dev/null &lt;&lt;EOF
+[Unit]
+Description=MobiliteIQ - quatre ingestions automatiques
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=$linux_user
+WorkingDirectory=$project_dir
+ExecStart=$project_dir/.venv/bin/python -m mobiliteiq serve
+Environment=PYTHONUNBUFFERED=1
+Restart=always
+RestartSec=30
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl daemon-reload
+sudo systemctl enable --now mobiliteiq.service
+systemctl status mobiliteiq.service --no-pager
+sudo journalctl -u mobiliteiq.service -n 80 --no-pager
+</code></pre>
+<p>Le chemin Linux choisi à l'étape 1 ne contient pas d'espaces. <code>.env</code> est lu par le programme, sous votre utilisateur; aucun mot de passe n'est inscrit dans le fichier de service. <code>active (running)</code> confirme que le processus tourne; vérifiez aussi les réussites en base pour confirmer les collectes.</p>
+<p>Testez le redémarrage :</p>
+<pre><code class="language-bash">sudo systemctl restart mobiliteiq.service
+systemctl is-active mobiliteiq.service
+systemctl is-enabled mobiliteiq.service
+</code></pre>
+<p>Les deux réponses attendues sont <code>active</code> et <code>enabled</code>. Les dates conservées en base empêchent de relancer les lots réussis avant leur échéance. Une tentative restée <code>running</code> après interruption sera marquée en échec au prochain cycle verrouillé.</p>
+<h3 id="35-demarrer-wsl-a-louverture-de-session-windows">3.5 Démarrer WSL à l'ouverture de session Windows</h3>
+<p>Activer systemd ne démarre pas Ubuntu avant que Windows lance WSL. Pour ce laboratoire, configurez une tâche Windows qui lance et maintient une session WSL sous votre compte habituel.</p>
+<p>Dans le <strong>Planificateur de tâches Windows → Créer une tâche</strong> :</p>
+<ol>
+<li>Nom : <code>MobiliteIQ - maintien WSL</code>.</li>
+<li>Choisissez votre utilisateur Windows habituel et <strong>Exécuter uniquement si l'utilisateur est connecté</strong>.</li>
+<li>Déclencheur : <strong>À l'ouverture de session</strong>, pour cet utilisateur.</li>
+<li>Action : <strong>Démarrer un programme</strong>.</li>
+<li>Programme : <code>C:\Windows\System32\wsl.exe</code>.</li>
+<li>Arguments, en adaptant le nom de distribution indiqué par <code>wsl --list --verbose</code> :</li>
+</ol>
+<pre><code class="language-text">-d Ubuntu --exec /bin/sleep infinity
+</code></pre>
+<ol>
+<li>Désactivez la limite d'arrêt après une durée et choisissez de ne pas démarrer une seconde instance si la tâche fonctionne déjà.</li>
+<li>Selon votre usage, retirez la condition « démarrer uniquement sur secteur » et l'arrêt au passage sur batterie.</li>
+<li>Lancez la tâche avec <strong>Exécuter</strong>. Le statut peut rester <strong>En cours</strong>, puisque le processus maintient la session WSL.</li>
+</ol>
+<p>Cette tâche ne planifie pas les quatre sources : c'est Python qui le fait. Elle maintient WSL disponible. Vérifiez le service et les dates en base après une nouvelle ouverture de session Windows. Adaptez la veille dans les paramètres d'alimentation si vous attendez des collectes en continu. Un PC éteint, en veille ou une session fermée interrompt cette disponibilité; le présent montage n'est pas un serveur 24 h/24.</p>
+<h3 id="36-surveiller-et-mettre-a-jour-le-projet">3.6 Surveiller et mettre à jour le projet</h3>
+<pre><code class="language-bash">sudo journalctl -u mobiliteiq.service -f
+</code></pre>
+<p>Ctrl+C ferme le suivi des journaux sans arrêter le service. Pour examiner la qualité :</p>
+<pre><code class="language-bash">source .venv/bin/activate
+python -m mobiliteiq monitor
+psql -h localhost -U mobiliteiq -d mobiliteiq -W -c 'SELECT * FROM bi.ops_alertes;'
+</code></pre>
+<p>Le code de sortie 2 de <code>monitor</code> signifie qu'une alerte est ouverte. Examinez l'âge des collectes, les échecs, les rejets et l'âge réel de la météo. Aucun courriel ni message externe n'est envoyé.</p>
+<p>Pour appliquer une modification depuis GitHub, sauvegardez d'abord votre base, puis :</p>
+<pre><code class="language-bash">sudo systemctl stop mobiliteiq.service
+git status
+git switch main
+git pull --ff-only
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+RUN_PG_TESTS=1 python -m pytest -q
+python -m mobiliteiq init-db
+sudo systemctl start mobiliteiq.service
+</code></pre>
+<p>Si une commande échoue, résolvez le problème avant de poursuivre les suivantes. Ne changez pas de branche avec des modifications non enregistrées. Le schéma fourni est additif; une future migration destructive demandera une procédure propre.</p>
+<p>Pour sauvegarder :</p>
+<pre><code class="language-bash">mkdir -p ~/MobiliteIQ-Backups
+pg_dump -h localhost -U mobiliteiq -d mobiliteiq -W -Fc -f ~/MobiliteIQ-Backups/mobiliteiq_$(date +%Y%m%d_%H%M%S).dump
+</code></pre>
+<p>Conservez aussi <code>data/raw</code>, les modèles et la configuration dans un emplacement protégé. La base et le brut ne sont pas purgés automatiquement. Pour tester une restauration, créez une base distincte et utilisez <code>pg_restore</code>; ne testez pas une restauration sur votre base réelle.</p>
+<h3 id="37-actualiser-le-rapport-power-bi">3.7 Actualiser le rapport Power BI</h3>
+<p>Les vues PostgreSQL évoluent après chaque lot réussi. En mode <strong>Import</strong>, le rapport change seulement après son actualisation.</p>
+<ul>
+<li>Dans Desktop : <strong>Home → Refresh</strong>, puis enregistrez le PBIX.</li>
+<li>Pour automatiser dans Power BI Service : publiez dans un espace accessible avec votre licence, installez une passerelle locale sur un Windows disponible et configurez une connexion PostgreSQL avec le même serveur et la même base que le modèle.</li>
+<li>Dans les paramètres du modèle sémantique, associez la passerelle, vérifiez les identifiants et activez l'actualisation planifiée. Testez d'abord <strong>Refresh now</strong>, puis consultez l'historique d'actualisation.</li>
+</ul>
+<p>Le serveur <code>localhost</code> de la passerelle désigne le Windows où elle est installée : pour ce laboratoire, utilisez le même PC que WSL et vérifiez que la passerelle y atteint PostgreSQL. Ne supposez pas qu'un test réussi dans Desktop garantit l'accès depuis le service de passerelle.</p>
+<p>Une actualisation horaire du rapport Import dépend de la licence : la documentation indique jusqu'à 8 actualisations planifiées par jour en Pro et jusqu'à 48 pour PPU/Premium ou les capacités indiquées. Consultez les <a href="https://learn.microsoft.com/en-us/power-bi/connect-data/refresh-scheduled-refresh">limites et réglages officiels</a>. Les ingestions horaires continuent même si le rapport s'actualise moins souvent. DirectQuery peut être étudié séparément selon votre rapport et les contraintes d'accès.</p>
+<h3 id="38-faire-la-demonstration-finale">3.8 Faire la démonstration finale</h3>
+<table>
+<thead>
+<tr>
+<th>Vérification</th>
+<th>Preuve à conserver</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VS Code connecté à Ubuntu</td>
+<td>Coin WSL et terminal Linux</td>
+</tr>
+<tr>
+<td>Quatre sources collectées</td>
+<td>bi.etat_sources avec réussites et dates</td>
+</tr>
+<tr>
+<td>Automatisation active</td>
+<td>État systemd et nouveaux lots aux échéances</td>
+</tr>
+<tr>
+<td>Contrôle qualité</td>
+<td>Tests de panne/rejet et maintien du dernier lot valide</td>
+</tr>
+<tr>
+<td>Analyses et modèle</td>
+<td>CSV statistiques, modèle versionné, limites expliquées</td>
+</tr>
+<tr>
+<td>Power BI cohérent</td>
+<td>Comparaison des cartes avec SQL et mode réel/démo visible</td>
+</tr>
+<tr>
+<td>GitHub validé</td>
+<td>Dernier commit, Pull request et workflow réussi</td>
+</tr>
+<tr>
+<td>Actualisation du rapport</td>
+<td>Date de refresh ou historique Power BI Service</td>
+</tr>
+</tbody>
+</table>
+<p>Demandez à une autre personne de filtrer un secteur, retrouver une entrave et vérifier la fraîcheur des sources. Notez le résultat dans <code>docs/UAT.md</code>. Vous avez terminé lorsque le service collecte aux échéances, que les tests passent et que le rapport affiche des chiffres vérifiés. La création du PBIX, la publication GitHub et la configuration du service restent des actions à exécuter sur votre installation.</p>
+<h3 id="depannage-rapide">Dépannage rapide</h3>
+<table>
+<thead>
+<tr>
+<th>Problème</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Module Python introuvable</td>
+<td>Revenir dans le dossier du projet et activer <code>.venv</code></td>
+</tr>
+<tr>
+<td>PostgreSQL refuse la connexion</td>
+<td>Vérifier le service, le port et <code>.env</code></td>
+</tr>
+<tr>
+<td>Source en failed_source</td>
+<td>Lire l'erreur du run et les journaux; vérifier Internet et le service public</td>
+</tr>
+<tr>
+<td>Source en failed_quality</td>
+<td>Examiner les rejets et les champs configurés; ne pas effacer le dernier lot valide</td>
+</tr>
+<tr>
+<td>Pas de nouveau lot immédiatement</td>
+<td>Vérifier la dernière tentative et le délai normal ou de reprise</td>
+</tr>
+<tr>
+<td>systemd actif mais données anciennes</td>
+<td>Inspecter la base ciblée, les erreurs et la fraîcheur météo</td>
+</tr>
+<tr>
+<td>Plus de collecte après veille</td>
+<td>Réveiller le PC, relancer WSL, vérifier service et tâche Windows</td>
+</tr>
+<tr>
+<td>Modèle impossible à entraîner</td>
+<td>Attendre l'historique requis ou utiliser mobiliteiq_demo</td>
+</tr>
+<tr>
+<td>Power BI conserve les anciens chiffres</td>
+<td>Actualiser et vérifier la base, les filtres et la passerelle</td>
+</tr>
+</tbody>
+</table>
+<p>Références : <a href="https://code.visualstudio.com/docs/remote/wsl">VS Code avec WSL</a>, <a href="https://learn.microsoft.com/en-us/windows/wsl/systemd">systemd dans WSL</a>, <a href="https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers">PostgreSQL dans GitHub Actions</a>, <a href="https://learn.microsoft.com/power-query/connectors/postgresql">connecteur PostgreSQL Power BI</a>, <a href="https://learn.microsoft.com/en-us/power-bi/connect-data/refresh-scheduled-refresh">actualisation Power BI</a>.</p></main></body></html>

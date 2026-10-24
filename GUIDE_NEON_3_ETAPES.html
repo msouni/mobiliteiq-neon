@@ -1,0 +1,642 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MobilitéIQ Neon — Guide en 3 étapes</title><style>*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#edf3f6;color:#183445;font:16px/1.7 "Segoe UI",sans-serif}header{background:#123449;color:white;padding:32px max(24px,calc((100vw - 1100px)/2))}header small{color:#86e3cb;letter-spacing:2px}header strong{display:block;font-size:32px}nav{background:white;border-bottom:1px solid #cbdfe4;padding:12px 22px;position:sticky;top:0;z-index:2}nav ul{list-style:none;display:flex;justify-content:center;gap:20px;padding:0;margin:0;flex-wrap:wrap}nav a{font-size:14px;font-weight:600}main{max-width:1100px;margin:30px auto;background:white;border:1px solid #dae5e9;border-radius:12px;padding:45px 50px}h1{font-size:34px;line-height:1.3}h2{margin-top:65px;padding-top:22px;border-top:5px solid #13a88d;color:#08776e;scroll-margin-top:120px}h3{color:#19586a;margin-top:34px}pre{background:#123449;color:#effbfc;padding:20px;border-radius:8px;overflow-x:auto;line-height:1.55;font-size:14px}code{font-family:Consolas,monospace}p code,li code,td code{background:#edf4f5;padding:2px 4px;border-radius:3px}table{border-collapse:collapse;width:100%;margin:20px 0;font-size:14px}th,td{border:1px solid #d3e1e5;padding:11px;text-align:left;vertical-align:top}th{background:#173f53;color:white}tr:nth-child(even){background:#f1f7f8}a{color:#087786;overflow-wrap:anywhere}figure{margin:28px 0}svg{width:100%;height:auto;display:block}figcaption{text-align:center;color:#546c78;font-size:14px;margin-top:10px}@media(max-width:760px){main{margin:0;padding:24px 18px;border:0}nav{position:static}nav ul{display:block}table{display:block;overflow-x:auto}h1{font-size:26px}}@media print{header,nav{display:none}main{margin:0;padding:0;border:0;max-width:none}body{background:white;font-size:10pt}h2{break-before:page}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f4f5;color:#111;border:1px solid #ccd}h3{break-after:avoid}tr,figure{break-inside:avoid}}</style></head><body><header><small>PROJET CLOUD · ÉQUIPE DE CINQ</small><strong>MobilitéIQ / PostgreSQL sur Neon</strong></header><nav><div class="toc">
+<ul>
+<li><a href="#avant-de-commencer-qui-fait-quoi">Avant de commencer : qui fait quoi ?</a></li>
+<li><a href="#etape-1-creer-postgresql-sur-neon-et-connecter-python">Étape 1 — Créer PostgreSQL sur Neon et connecter Python</a></li>
+<li><a href="#etape-2-travailler-a-cinq-et-automatiser-avec-github">Étape 2 — Travailler à cinq et automatiser avec GitHub</a></li>
+<li><a href="#etape-3-alimenter-power-bi-analyser-et-valider-le-projet">Étape 3 — Alimenter Power BI, analyser et valider le projet</a></li>
+</ul>
+</div>
+</nav><main><h1 id="mobiliteiq-avec-neon-le-projet-complet-en-3-etapes">MobilitéIQ avec Neon — le projet complet en 3 étapes</h1>
+<p><strong>Un guide pour une équipe de cinq personnes, même sans grande expérience technique.</strong><br />
+Version du 22 octobre 2026 · Travaux et météo chaque heure · Débit et réseau routier chaque jour.</p>
+<h2 id="avant-de-commencer-qui-fait-quoi">Avant de commencer : qui fait quoi ?</h2>
+<p>Votre projet fonctionne comme une chaîne de travail. <strong>Python va chercher les informations, Neon les conserve, Power BI les présente.</strong> GitHub permet aux cinq membres de travailler sur le code et lance les collectes automatiquement.</p>
+<p>Vous utiliserez encore WSL et VS Code sur vos ordinateurs pour développer. La base réelle sera sur Internet chez Neon; vous n'installerez pas PostgreSQL comme serveur sur votre ordinateur. Quand GitHub exécutera la collecte, vos PC pourront être éteints.</p>
+<figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 570" role="img" aria-labelledby="title desc">
+<title id="title">Le pipeline MobilitéIQ avec Neon</title><desc id="desc">Les cinq membres publient le code sur GitHub. GitHub Actions lance Python qui collecte les sources, alimente Neon et archive le brut. Power BI relit les vues de Neon.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#247a87"/></marker></defs>
+<rect width="1000" height="570" rx="18" fill="#eff6f8"/>
+<g fill="none" stroke="#247a87" stroke-width="3" marker-end="url(#arrow)">
+<path d="M300 80 H365"/><path d="M635 80 H700"/>
+<path d="M835 135 V175 H500 V215"/>
+<path d="M300 270 H365"/><path d="M635 270 H700"/>
+<path d="M500 325 V405"/><path d="M835 325 V405"/>
+</g>
+<g stroke="#c8dfe5" stroke-width="2">
+<rect x="30" y="25" width="270" height="110" rx="12" fill="white"/>
+<rect x="365" y="25" width="270" height="110" rx="12" fill="white"/>
+<rect x="700" y="25" width="270" height="110" rx="12" fill="#e0f5ef"/>
+<rect x="30" y="215" width="270" height="110" rx="12" fill="white"/>
+<rect x="365" y="215" width="270" height="110" rx="12" fill="#123d52"/>
+<rect x="700" y="215" width="270" height="110" rx="12" fill="#d7f2ed"/>
+<rect x="365" y="405" width="270" height="110" rx="12" fill="white"/>
+<rect x="700" y="405" width="270" height="110" rx="12" fill="#fff1cf"/>
+</g>
+<g font-family="Segoe UI, sans-serif" fill="#14384c" text-anchor="middle">
+<text x="165" y="64" font-size="22" font-weight="700">Votre équipe de 5</text><text x="165" y="94" font-size="17">VS Code + WSL</text><text x="165" y="117" font-size="16">Développe et relit le code</text>
+<text x="500" y="64" font-size="22" font-weight="700">GitHub commun</text><text x="500" y="94" font-size="17">Code et tests</text><text x="500" y="117" font-size="16">Une version partagée</text>
+<text x="835" y="64" font-size="22" font-weight="700">GitHub Actions</text><text x="835" y="94" font-size="17">Déclenchement horaire</text><text x="835" y="117" font-size="16">Fonctionne sans vos PC</text>
+<text x="165" y="254" font-size="22" font-weight="700">Sources publiques</text><text x="165" y="284" font-size="17">Travaux · Météo</text><text x="165" y="307" font-size="16">Débit · Réseau routier</text>
+<text x="500" y="254" font-size="22" font-weight="700" fill="white">Programme Python</text><text x="500" y="284" font-size="17" fill="white">Télécharge et contrôle</text><text x="500" y="307" font-size="16" fill="white">Prépare les données</text>
+<text x="835" y="254" font-size="22" font-weight="700">PostgreSQL Neon</text><text x="835" y="284" font-size="17">Base commune en ligne</text><text x="835" y="307" font-size="16">Historique + vues BI</text>
+<text x="500" y="444" font-size="22" font-weight="700">Archives brutes</text><text x="500" y="474" font-size="17">Artifacts GitHub</text><text x="500" y="497" font-size="16">Conservation : 1 jour</text>
+<text x="835" y="444" font-size="22" font-weight="700">Power BI</text><text x="835" y="474" font-size="17">Relit les vues de Neon</text><text x="835" y="497" font-size="16">Actualisation distincte</text>
+<text x="835" y="371" font-size="15">Connexion sécurisée / lecture seule</text>
+<text x="500" y="548" font-size="15">La base est dans le cloud. WSL sert au développement et aux essais.</text>
+</g></svg><figcaption>Du code partagé aux tableaux de bord : les rôles de chaque composant.</figcaption></figure>
+
+<table>
+<thead>
+<tr>
+<th>Outil</th>
+<th>Explication simple</th>
+<th>Emplacement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WSL Ubuntu</td>
+<td>L'environnement dans lequel vous lancez Python</td>
+<td>Ordinateur de chaque membre</td>
+</tr>
+<tr>
+<td>VS Code</td>
+<td>L'éditeur pour lire et modifier le projet</td>
+<td>Ordinateur de chaque membre, connecté à WSL</td>
+</tr>
+<tr>
+<td>GitHub</td>
+<td>Le dossier de code commun et son historique</td>
+<td>Internet</td>
+</tr>
+<tr>
+<td>GitHub Actions</td>
+<td>L'exécutant qui lance Python aux heures prévues</td>
+<td>Internet</td>
+</tr>
+<tr>
+<td>Neon / PostgreSQL</td>
+<td>Le classeur central des données</td>
+<td>Internet</td>
+</tr>
+<tr>
+<td>Power BI</td>
+<td>Les tableaux, graphiques et cartes</td>
+<td>Desktop sur Windows; publication en ligne selon la licence</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Les trois étapes :</strong> 1. Créer la base sur Neon et connecter le projet. 2. Mettre le code en commun et activer les collectes. 3. Construire et actualiser Power BI, puis valider le travail d'équipe.</p>
+<p>Le guide fournit les actions à réaliser. Le code est préparé, mais aucun compte, dépôt GitHub, serveur Neon ou rapport Power BI n'a été créé pour votre équipe par cette livraison. Neon est ici une base PostgreSQL hébergée; ce parcours ne nécessite pas de lac de données.</p>
+<h2 id="etape-1-creer-postgresql-sur-neon-et-connecter-python">Étape 1 — Créer PostgreSQL sur Neon et connecter Python</h2>
+<h3 id="11-choisir-le-responsable-du-premier-demarrage">1.1 Choisir le responsable du premier démarrage</h3>
+<p>Un membre crée l'organisation Neon et le dépôt GitHub. Il invite ensuite les quatre autres. Chacun conserve son propre compte; vous ne partagez pas un mot de passe de connexion au site.</p>
+<p>Répartition possible : personne 1, base et accès; personne 2, collectes; personne 3, qualité et tests; personne 4, analyses; personne 5, rapport Power BI et coordination de la démonstration. Les responsabilités peuvent être échangées.</p>
+<h3 id="12-creer-le-compte-et-le-projet-neon">1.2 Créer le compte et le projet Neon</h3>
+<ol>
+<li>Ouvrez <a href="https://neon.com/">neon.com</a> et choisissez <strong>Sign up</strong>.</li>
+<li>Créez votre compte, par exemple avec votre compte GitHub.</li>
+<li>Dans la console, créez ou sélectionnez une <strong>organisation</strong> destinée à votre groupe.</li>
+<li>Dans les paramètres de l'organisation, cherchez <strong>Members / Invitations</strong> et invitez les quatre autres membres.</li>
+<li>Créez un projet, par exemple <code>mobiliteiq-equipe5</code>.</li>
+<li>Choisissez l'offre gratuite pour commencer. Vérifiez que l'écran ne vous fait pas souscrire une offre payante.</li>
+<li>Choisissez une région proche de votre équipe et gardez la version PostgreSQL proposée si vous n'avez pas de contrainte particulière.</li>
+<li>Repérez la branche principale. Selon la création du projet, elle peut s'appeler <code>main</code> ou <code>production</code>. Dans ce guide, « branche principale Neon » signifie celle qui héberge vos données réelles.</li>
+</ol>
+<p>Les libellés de la console peuvent évoluer; les notions à retrouver sont projet, branche, bases, rôles et connexion. Les limites gratuites doivent être surveillées dans <strong>Usage / Billing</strong>. L'offre consultée annonce 1 Go de base par projet, 100 CU-heures mensuelles par projet et des membres illimités. Ce volume n'est pas garanti suffisant pour tout l'historique du projet. <a href="https://neon.com/pricing">Offre Neon</a>.</p>
+<p><strong>Point de contrôle :</strong> chaque membre invité peut accéder au projet avec son compte personnel.</p>
+<h3 id="13-creer-les-bases-postgresql">1.3 Créer les bases PostgreSQL</h3>
+<p>Un <strong>projet Neon</strong> est votre espace d'hébergement. Une <strong>base</strong> est le classeur de données situé dans cet espace.</p>
+<p>Dans la console Neon :</p>
+<ol>
+<li>Sélectionnez votre projet et la branche principale.</li>
+<li>Ouvrez <strong>Databases</strong>, parfois dans <strong>Branches → votre branche → Roles &amp; Databases</strong>.</li>
+<li>Cliquez <strong>New database / Create database</strong>.</li>
+<li>Nommez la base exactement <code>mobiliteiq</code> et choisissez le rôle propriétaire proposé.</li>
+<li>Créez aussi <code>mobiliteiq_demo</code> pour les données fictives utilisées pour apprendre.</li>
+<li>Pour les tests manuels sur Neon, créez un <strong>deuxième projet Neon</strong>, par exemple <code>mobiliteiq-tests</code>, puis une base <code>mobiliteiq_test</code>. Vous éviterez ainsi de perturber le projet réel.</li>
+</ol>
+<p>La base <code>neondb</code> créée automatiquement peut rester en place; ce programme attend les noms ci-dessus. Vous pouvez commencer seulement avec <code>mobiliteiq</code> et ajouter la démo plus tard. Les tests GitHub utiliseront leur propre PostgreSQL temporaire et ne nécessitent pas la base de test Neon.</p>
+<table>
+<thead>
+<tr>
+<th>Base</th>
+<th>Contenu</th>
+<th>Utilisateur principal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mobiliteiq</td>
+<td>Collectes réelles, historique, indicateurs</td>
+<td>Automatisation et équipe</td>
+</tr>
+<tr>
+<td>mobiliteiq_demo</td>
+<td>Données synthétiques pour préparer les analyses</td>
+<td>Équipe</td>
+</tr>
+<tr>
+<td>mobiliteiq_test, projet séparé</td>
+<td>Données jetables de tests</td>
+<td>Responsable des tests</td>
+</tr>
+</tbody>
+</table>
+<p>Ne copiez pas la production sur une base de test en conservant des accès d'écriture à la production. Les tests effacent leurs tables dans <code>mobiliteiq_test</code>.</p>
+<h3 id="14-obtenir-ladresse-de-connexion-securisee">1.4 Obtenir l'adresse de connexion sécurisée</h3>
+<p>Dans Neon, cliquez <strong>Connect</strong> :</p>
+<ol>
+<li>Sélectionnez la branche principale, la base <code>mobiliteiq</code> et le rôle propriétaire.</li>
+<li><strong>Désactivez Connection pooling.</strong> Le projet utilise un verrou qui nécessite une connexion directe.</li>
+<li>Copiez l'URL PostgreSQL complète, de la forme suivante :</li>
+</ol>
+<pre><code class="language-text">postgresql://UTILISATEUR:MOT_DE_PASSE@HOTE_NEON/mobiliteiq?sslmode=require
+</code></pre>
+<p>L'URL réelle peut aussi contenir <code>channel_binding=require</code>; conservez les paramètres fournis. Ne copiez pas l'enveloppe <code>psql '...'</code> si elle apparaît : vous voulez seulement l'URL, sans guillemets. Le nom d'hôte direct ne contient pas <code>-pooler</code>.</p>
+<p>Cette adresse inclut un mot de passe : conservez-la dans un gestionnaire de mots de passe et ne la publiez pas dans le code, une capture ou un message collectif non protégé. La connexion choisie ici sert à l'installation et à la collecte; l'accès Power BI en lecture seule sera créé à l'étape 3.</p>
+<h3 id="15-ouvrir-le-projet-dans-wsl-et-vs-code">1.5 Ouvrir le projet dans WSL et VS Code</h3>
+<p>Sous Windows, installez WSL Ubuntu et VS Code avec l'extension <strong>WSL</strong> si ce n'est pas déjà fait. Dans PowerShell Windows, vérifiez :</p>
+<pre><code class="language-powershell">wsl --list --verbose
+</code></pre>
+<p>Si aucune distribution n'est installée, utilisez un PowerShell administrateur :</p>
+<pre><code class="language-powershell">wsl --install -d Ubuntu
+</code></pre>
+<p>Terminez la création de votre utilisateur Ubuntu. Dans <strong>Ubuntu</strong>, exécutez :</p>
+<pre><code class="language-bash">sudo apt update
+sudo apt install -y python3 python3-venv python3-pip git unzip
+mkdir -p ~/MobiliteIQ-Lab
+cd ~/MobiliteIQ-Lab
+explorer.exe .
+</code></pre>
+<p>Copiez le nouveau ZIP <code>MobiliteIQ_Neon.zip</code> dans la fenêtre ouverte. Dans Ubuntu :</p>
+<pre><code class="language-bash">unzip MobiliteIQ_Neon.zip
+cd MobiliteIQ_Neon
+code .
+</code></pre>
+<p>Utilisez un dossier neuf si celui-ci existe déjà. Dans VS Code, vérifiez <strong>WSL: Ubuntu</strong> en bas de la fenêtre. Ouvrez <strong>Terminal → New Terminal</strong>. Toutes les commandes suivantes, sauf indication contraire, sont des commandes Ubuntu à saisir dans ce terminal.</p>
+<h3 id="16-installer-les-dependances-et-renseigner-env">1.6 Installer les dépendances et renseigner .env</h3>
+<pre><code class="language-bash">python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+cp .env.example .env
+code .env
+</code></pre>
+<p>Si vous avez déjà un <code>.env</code>, modifiez-le sans le remplacer. Dans ce fichier, remplacez la ligne d'exemple par votre vraie URL :</p>
+<pre><code class="language-ini">DATABASE_URL=postgresql://UTILISATEUR:MOT_DE_PASSE@HOTE_NEON/mobiliteiq?sslmode=require
+</code></pre>
+<p>Ne mettez pas de guillemets. Gardez les autres URL commentées jusqu'à la création de leurs bases. Après création, revenez dans <strong>Connect</strong> sur Neon pour sélectionner chaque base et recopiez son URL directe :</p>
+<pre><code class="language-ini">DATABASE_URL_DEMO=postgresql://UTILISATEUR:MOT_DE_PASSE@HOTE_NEON/mobiliteiq_demo?sslmode=require
+DATABASE_URL_TEST=postgresql://UTILISATEUR:MOT_DE_PASSE@AUTRE_HOTE_NEON/mobiliteiq_test?sslmode=require
+</code></pre>
+<p>Le projet refuse une connexion de test pointant vers la base réelle et refuse de réutiliser automatiquement l'URL réelle quand l'URL de démo ou de test manque. Puis :</p>
+<pre><code class="language-bash">chmod 600 .env
+python -m mobiliteiq check-db
+</code></pre>
+<p>Résultat attendu : connexion réussie à <code>mobiliteiq</code>, chiffrement TLS actif. Aucun serveur PostgreSQL local n'est nécessaire. Le premier réveil de la base peut prendre quelques instants.</p>
+<h3 id="17-creer-automatiquement-les-tables-et-vues">1.7 Créer automatiquement les tables et vues</h3>
+<p>Créer une base vide dans Neon ne suffit pas : il faut maintenant créer ses tableaux de rangement.</p>
+<pre><code class="language-bash">python -m mobiliteiq init-db
+</code></pre>
+<p>Python lit <code>sql/schema.sql</code> et crée les tables <code>runs</code>, <code>observations</code>, <code>rejects</code>, <code>sector_hour</code>, ainsi que les tables d'analyse et les vues <code>bi</code>. Vous n'avez pas à recopier ce long SQL manuellement.</p>
+<p>Dans <strong>SQL Editor</strong> de Neon, sélectionnez bien la base <code>mobiliteiq</code> puis exécutez :</p>
+<pre><code class="language-sql">SELECT current_database();
+SELECT table_schema, table_name
+FROM information_schema.tables
+WHERE table_schema IN ('public', 'bi')
+ORDER BY table_schema, table_name;
+</code></pre>
+<p>Vous devez voir <code>mobiliteiq</code> et les objets créés. Cette commande initialise les objets sans supprimer les données existantes.</p>
+<h3 id="18-faire-la-premiere-ingestion-reelle">1.8 Faire la première ingestion réelle</h3>
+<pre><code class="language-bash">python -m mobiliteiq audit
+code data/audit.json
+python -m mobiliteiq run --force
+</code></pre>
+<p>L'audit montre les données reçues et les champs disponibles. La collecte <code>run --force</code> lit les quatre sources immédiatement. Ne relancez pas l'audit à chaque collecte automatique : le contrôle qualité est déjà intégré au programme.</p>
+<p>Dans Neon SQL Editor, base <code>mobiliteiq</code> :</p>
+<pre><code class="language-sql">SELECT * FROM bi.etat_sources ORDER BY source;
+SELECT source, count(*) AS nombre_elements
+FROM bi.observations_courantes
+GROUP BY source;
+SELECT * FROM bi.ops_alertes;
+</code></pre>
+<p>Chaque source doit avoir une dernière tentative et, si elle fonctionne, une dernière réussite. Un lot travaux vide peut être normal dans le territoire choisi. Les autres sources doivent contenir des observations valides. Une alerte météo peut signaler que le producteur publie des observations anciennes malgré une collecte réussie.</p>
+<p><strong>Comment la base est alimentée :</strong> Python télécharge les réponses, vérifie identifiants, champs, dates, valeurs et géométries, puis enregistre un lot. Il conserve l'historique et prépare les regroupements par secteur et heure. Un lot de qualité insuffisante ne remplace pas le dernier lot valide.</p>
+<p><strong>Fin de l'étape 1 :</strong> vous voyez dans Neon des données arrivées depuis votre programme WSL. Si une ancienne version fonctionnait en local, elle n'a pas été migrée par ces commandes : sauvegardez son historique séparément avant d'envisager un transfert.</p>
+<h2 id="etape-2-travailler-a-cinq-et-automatiser-avec-github">Étape 2 — Travailler à cinq et automatiser avec GitHub</h2>
+<h3 id="21-creer-le-depot-commun">2.1 Créer le dépôt commun</h3>
+<p>Sur GitHub, créez un dépôt vide nommé par exemple <code>mobiliteiq-neon</code>, sans README initial. Pour le travail d'équipe, utilisez une organisation GitHub ou invitez les quatre autres personnes dans <strong>Settings → Collaborators</strong> du dépôt.</p>
+<p>Dans le terminal WSL du premier membre :</p>
+<pre><code class="language-bash">git config --global user.name &quot;Votre nom&quot;
+git config --global user.email &quot;Votre adresse GitHub ou adresse privée GitHub&quot;
+git init -b main
+git add .
+git status
+git diff --cached --stat
+</code></pre>
+<p>Vérifiez que <code>.env</code>, les données téléchargées, <code>.venv</code>, les modèles et les exports ne figurent pas dans les fichiers ajoutés. <code>.gitignore</code> les exclut. <code>.env.example</code> doit rester un exemple sans secret réel.</p>
+<pre><code class="language-bash">git commit -m &quot;MobiliteIQ avec PostgreSQL Neon et collecte automatique&quot;
+git remote add origin https://github.com/VOTRE_COMPTE_OU_ORGANISATION/mobiliteiq-neon.git
+git push -u origin main
+</code></pre>
+<p>Remplacez le nom du compte dans l'URL. Authentifiez-vous via une méthode GitHub prise en charge; ne placez pas de jeton dans l'URL. Si le dossier est déjà un dépôt, examinez <code>git status</code> et <code>git remote -v</code> au lieu de réinitialiser sa configuration.</p>
+<h3 id="22-connecter-les-quatre-autres-membres">2.2 Connecter les quatre autres membres</h3>
+<p>Une fois invités au dépôt, ils exécutent dans Ubuntu :</p>
+<pre><code class="language-bash">mkdir -p ~/MobiliteIQ-Lab
+cd ~/MobiliteIQ-Lab
+git clone https://github.com/VOTRE_COMPTE_OU_ORGANISATION/mobiliteiq-neon.git
+cd mobiliteiq-neon
+code .
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+</code></pre>
+<p>Chaque membre crée son propre <code>.env</code> si son rôle nécessite d'exécuter Python contre une base. L'accès à l'organisation Neon et l'accès SQL à la base sont deux choses différentes. Donnez l'accès d'écriture à la base réelle seulement aux personnes qui en ont besoin. Les autres peuvent travailler sur la démo ou en lecture seule dans Power BI.</p>
+<p>Pour modifier le code, créez une branche par tâche, par exemple :</p>
+<pre><code class="language-bash">git switch -c ajout-page-qualite
+# Modifier puis tester les fichiers.
+git add .
+git commit -m &quot;Améliorer le suivi de qualité&quot;
+git push -u origin ajout-page-qualite
+</code></pre>
+<p>Sur GitHub, ouvrez une <strong>Pull request</strong> vers <code>main</code>, faites relire par un autre membre et attendez les tests avant fusion. Le workflow de tests inclus utilise un PostgreSQL temporaire sur GitHub : il ne touche pas à Neon.</p>
+<h3 id="23-enregistrer-la-connexion-dans-github-secrets">2.3 Enregistrer la connexion dans GitHub Secrets</h3>
+<p>Un seul responsable effectue cette opération :</p>
+<ol>
+<li>Ouvrez le dépôt GitHub.</li>
+<li><strong>Settings → Secrets and variables → Actions</strong>.</li>
+<li>Cliquez <strong>New repository secret</strong>.</li>
+<li>Nom exact : <code>NEON_DATABASE_URL</code>.</li>
+<li>Valeur : l'URL directe complète de la base réelle <code>mobiliteiq</code>.</li>
+<li>Enregistrez.</li>
+</ol>
+<p>GitHub fournit cette valeur au programme au moment de l'exécution. L'URL n'est pas écrite dans le fichier du workflow. N'ajoutez pas <code>.env</code> au dépôt. Toute personne autorisée à modifier des workflows peut modifier le code qui reçoit les secrets : réservez les accès au dépôt aux cinq membres de confiance et relisez les changements.</p>
+<h3 id="24-lancer-et-verifier-la-collecte-automatique">2.4 Lancer et vérifier la collecte automatique</h3>
+<p>Le fichier fourni est <code>.github/workflows/ingestion-neon.yml</code>. Il est séparé du workflow de tests.</p>
+<ol>
+<li>Vérifiez que le fichier est bien présent sur la branche <code>main</code> de GitHub.</li>
+<li>Ouvrez <strong>Actions → Collecte Neon</strong>.</li>
+<li>Cliquez <strong>Run workflow</strong>.</li>
+<li>Pour le premier essai, cochez <strong>Recollecter les quatre sources immédiatement</strong>.</li>
+<li>Lancez et attendez le résultat.</li>
+<li>Ouvrez l'exécution : les étapes vérifient la connexion, collectent et archivent les fichiers bruts.</li>
+<li>Revenez dans Neon et consultez <code>bi.etat_sources</code> pour confirmer les dates.</li>
+</ol>
+<p>Un résultat rouge nécessite de lire l'étape en échec : secret absent, connexion refusée, problème de source ou qualité insuffisante. Les autres sources peuvent tout de même avoir réussi. Les dernières données valides restent disponibles.</p>
+<h3 id="25-comprendre-le-calendrier">2.5 Comprendre le calendrier</h3>
+<p>GitHub déclenche le workflow chaque heure à la minute <strong>17</strong>, selon l'heure UTC. Python décide alors quelles sources sont à actualiser.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Règle dans cette version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Travaux</td>
+<td>Une collecte réussie par créneau horaire UTC</td>
+</tr>
+<tr>
+<td>Météo</td>
+<td>Une collecte réussie par créneau horaire UTC</td>
+</tr>
+<tr>
+<td>Débit</td>
+<td>Une collecte réussie par jour UTC</td>
+</tr>
+<tr>
+<td>RTSS</td>
+<td>Une collecte réussie par jour UTC</td>
+</tr>
+</tbody>
+</table>
+<p>Un créneau évite qu'une collecte commencée en retard empêche celle de l'heure suivante. La journée UTC ne correspond pas exactement à la journée locale au Québec. Le workflow ne garantit pas un déclenchement à la seconde; GitHub peut le retarder ou manquer un démarrage. Les données intermédiaires non observées ne sont pas reconstruites.</p>
+<p><strong>Après échec :</strong> les appels HTTP possèdent des reprises courtes intégrées. Si toute la collecte échoue, GitHub réessaiera à sa prochaine exécution horaire; vous pouvez aussi relancer manuellement. Le délai de cinq minutes configuré dans le code n'installe pas un déclenchement GitHub toutes les cinq minutes. Ne lancez pas <code>serve</code> en permanence sur GitHub : le workflow utilise <code>run</code>, puis se termine.</p>
+<p>Les planifications publiques peuvent être désactivées après 60 jours sans activité du dépôt. Contrôlez régulièrement l'onglet Actions. Sur dépôt privé, les minutes disponibles dépendent du forfait; l'installation des bibliothèques et le traitement les consomment. <a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule">Planification GitHub</a>, <a href="https://docs.github.com/en/billing/concepts/product-billing/github-actions">quotas Actions</a>.</p>
+<h3 id="26-ou-restent-les-donnees-et-fichiers">2.6 Où restent les données et fichiers ?</h3>
+<table>
+<thead>
+<tr>
+<th>Élément</th>
+<th>Emplacement et durée</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Données acceptées et historique</td>
+<td>PostgreSQL Neon, jusqu'à suppression explicite ou évolution de votre offre</td>
+</tr>
+<tr>
+<td>Statuts, rejets et indicateurs</td>
+<td>PostgreSQL Neon</td>
+</tr>
+<tr>
+<td>Fichiers bruts des collectes GitHub</td>
+<td>Artifacts de chaque exécution, conservation demandée de 1 jour</td>
+</tr>
+<tr>
+<td>Fichiers bruts des essais WSL</td>
+<td>Dossier <code>data/raw</code> du poste</td>
+</tr>
+<tr>
+<td>Code et documentation</td>
+<td>GitHub</td>
+</tr>
+</tbody>
+</table>
+<p>Pour télécharger le brut : <strong>Actions → une exécution → Artifacts → brut-…</strong>. La colonne <code>raw_path</code> des runs indique le chemin du dossier à retrouver dans l'archive. Les artifacts dépendent des quotas de stockage GitHub; téléchargez et archivez ce qui doit être conservé avant expiration. Ce mécanisme temporaire n'est pas un lac permanent ni une sauvegarde de la base. Pour un stockage brut durable, ajoutez plus tard un stockage objet cloud.</p>
+<h3 id="27-tester-sans-toucher-aux-donnees-reelles">2.7 Tester sans toucher aux données réelles</h3>
+<p>Dans WSL :</p>
+<pre><code class="language-bash">python -m pytest tests/test_core.py tests/test_scheduler.py tests/test_cloud.py -q
+</code></pre>
+<p>Pour les tests d'intégration, renseignez <code>DATABASE_URL_TEST</code> vers la base <code>mobiliteiq_test</code> dans le projet de test, puis :</p>
+<pre><code class="language-bash">RUN_PG_TESTS=1 python -m pytest -q
+</code></pre>
+<p>Ils effacent les tables de <code>mobiliteiq_test</code>. Le programme vérifie le nom exact de la base et refuse tout repli vers <code>DATABASE_URL</code>. Le workflow CI exécute également les tests PostgreSQL dans une base temporaire, sans utiliser les secrets Neon.</p>
+<p><strong>Fin de l'étape 2 :</strong> une exécution manuelle GitHub a réussi, puis une exécution planifiée a ajouté un lot dans Neon. Cela confirme que la collecte fonctionne sans votre PC.</p>
+<h2 id="etape-3-alimenter-power-bi-analyser-et-valider-le-projet">Étape 3 — Alimenter Power BI, analyser et valider le projet</h2>
+<h3 id="31-creer-un-acces-power-bi-en-lecture-seule">3.1 Créer un accès Power BI en lecture seule</h3>
+<p>Utilisez un compte SQL distinct pour éviter qu'un outil de consultation ait les droits du propriétaire. Dans le <strong>SQL Editor Neon</strong>, base <code>mobiliteiq</code>, sous le propriétaire, exécutez une seule fois :</p>
+<pre><code class="language-sql">CREATE ROLE powerbi_reader LOGIN PASSWORD 'REMPLACER_PAR_UN_MOT_DE_PASSE_DISTINCT';
+</code></pre>
+<p>Choisissez un mot de passe fort sans apostrophe pour cet exemple. Saisissez la valeur uniquement dans votre console; ne l'inscrivez pas dans les fichiers partagés. Si le rôle existe déjà, ne relancez pas sa création. Un rôle créé directement dans SQL peut ne pas apparaître comme un rôle géré par l'interface Neon.</p>
+<p>Ouvrez <code>sql/powerbi_reader.sql</code> dans VS Code, puis copiez et exécutez son contenu dans le même SQL Editor :</p>
+<pre><code class="language-sql">GRANT CONNECT ON DATABASE mobiliteiq TO powerbi_reader;
+GRANT USAGE ON SCHEMA bi TO powerbi_reader;
+GRANT SELECT ON ALL TABLES IN SCHEMA bi TO powerbi_reader;
+ALTER DEFAULT PRIVILEGES IN SCHEMA bi
+GRANT SELECT ON TABLES TO powerbi_reader;
+</code></pre>
+<p>Ce compte lit les vues <code>bi</code>; il ne reçoit pas le droit de modifier les observations. Pour des accès individuels, répétez le principe avec un rôle distinct par membre et les mêmes droits de lecture. Conservez le compte propriétaire pour l'installation et la collecte.</p>
+<h3 id="32-connecter-power-bi-desktop-a-neon">3.2 Connecter Power BI Desktop à Neon</h3>
+<p>Dans <strong>Connect</strong> sur Neon, repérez le nom d'hôte direct de votre base. Pour Power BI, il faut les éléments séparés, pas l'URL complète.</p>
+<table>
+<thead>
+<tr>
+<th>Champ Power BI</th>
+<th>Valeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Serveur</td>
+<td><code>HOTE_NEON:5432</code>, sans <code>https://</code>, chemin ou paramètres</td>
+</tr>
+<tr>
+<td>Base</td>
+<td><code>mobiliteiq</code></td>
+</tr>
+<tr>
+<td>Authentification</td>
+<td>Database</td>
+</tr>
+<tr>
+<td>Utilisateur</td>
+<td><code>powerbi_reader</code></td>
+</tr>
+<tr>
+<td>Mot de passe</td>
+<td>Celui créé pour ce rôle</td>
+</tr>
+</tbody>
+</table>
+<p>Dans Power BI Desktop Windows :</p>
+<ol>
+<li><strong>Home → Get data → More → Database → PostgreSQL database</strong>.</li>
+<li>Renseignez serveur et base.</li>
+<li>Choisissez <strong>Import</strong> pour commencer.</li>
+<li>Renseignez l'utilisateur et le mot de passe; conservez la connexion chiffrée.</li>
+<li>Dans <strong>Navigator</strong>, sélectionnez les vues du schéma <code>bi</code> listées ci-dessous.</li>
+<li>Cliquez <strong>Transform Data</strong>, vérifiez les types puis <strong>Close &amp; Apply</strong>.</li>
+</ol>
+<p>Si une erreur de certificat ou de chiffrement apparaît, examinez l'hôte et votre version de Power BI; ne désactivez pas la sécurité pour la masquer. <a href="https://learn.microsoft.com/en-us/power-query/connectors/postgresql">Connecteur PostgreSQL Microsoft</a>.</p>
+<h3 id="33-choisir-les-vues-et-construire-les-relations">3.3 Choisir les vues et construire les relations</h3>
+<table>
+<thead>
+<tr>
+<th>Vue</th>
+<th>Ce qu'elle fournit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>info_projet</td>
+<td>Nom de la base et réel/démonstration</td>
+</tr>
+<tr>
+<td>etat_sources</td>
+<td>Dernières tentatives, réussites et erreurs des quatre sources</td>
+</tr>
+<tr>
+<td>fact_entraves</td>
+<td>Dernier état des travaux collectés</td>
+</tr>
+<tr>
+<td>historique_entraves</td>
+<td>Première et dernière présence observées</td>
+</tr>
+<tr>
+<td>fact_secteur_heure</td>
+<td>Nombre d'entraves et contexte par secteur et heure</td>
+</tr>
+<tr>
+<td>dim_secteur, dim_date</td>
+<td>Listes pour les filtres</td>
+</tr>
+<tr>
+<td>ops_alertes</td>
+<td>Indicateurs de fraîcheur ou qualité en alerte</td>
+</tr>
+</tbody>
+</table>
+<p>Les secteurs sont une grille pédagogique, pas des quartiers officiels. Le DJMA est une référence de débit moyen et non le trafic en direct. Les agrégats restent liés à l'instantané travaux; une météo arrivée ensuite se rattache au prochain instantané travaux.</p>
+<p>Dans Power Query, vérifiez : identifiants et secteurs en texte; coordonnées et scores en décimal; nombres d'entraves en entier; <code>anomaly</code> en vrai/faux; <code>date_key</code> en date. Gardez les libellés UTC sur les dates de collecte; <code>heure_locale</code> est déjà calculée pour America/Toronto.</p>
+<p>Dans <strong>Model view</strong>, reliez la dimension vers chaque table, en <strong>One to many</strong>, filtre à sens unique :</p>
+<table>
+<thead>
+<tr>
+<th>Depuis</th>
+<th>Vers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dim_secteur[sector]</td>
+<td>fact_entraves[sector]</td>
+</tr>
+<tr>
+<td>dim_secteur[sector]</td>
+<td>historique_entraves[sector]</td>
+</tr>
+<tr>
+<td>dim_secteur[sector]</td>
+<td>fact_secteur_heure[sector]</td>
+</tr>
+<tr>
+<td>dim_date[date_key]</td>
+<td>fact_secteur_heure[date_key]</td>
+</tr>
+<tr>
+<td>dim_date[date_key]</td>
+<td>historique_entraves[date_key]</td>
+</tr>
+</tbody>
+</table>
+<p>Ne reliez pas directement les tables de faits entre elles. Le filtre de date sur l'historique correspond à la première observation; il ne représente pas « tous les travaux présents ce jour-là ». La table des travaux courants n'est pas filtrée par date dans ce modèle.</p>
+<h3 id="34-ajouter-les-mesures-et-trois-pages">3.4 Ajouter les mesures et trois pages</h3>
+<p>Ouvrez <code>powerbi/Measures.dax</code>. Dans Power BI, choisissez <strong>Modeling → New measure</strong> et copiez une mesure à la fois en conservant les noms des tables. Adaptez les virgules en points-virgules si votre configuration régionale le demande.</p>
+<table>
+<thead>
+<tr>
+<th>Page</th>
+<th>Visuels proposés</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Situation actuelle</td>
+<td>Cartes Entraves présentes et Dernière collecte UTC; liste des travaux; filtre secteur; carte géographique si autorisée</td>
+</tr>
+<tr>
+<td>Historique et analyses</td>
+<td>Courbe par heure locale; tableau des secteurs; filtres date et secteur; anomalies lorsqu'un modèle existe</td>
+</tr>
+<tr>
+<td>Qualité des données</td>
+<td>Tableau etat_sources; carte Alertes de qualité; détail ops_alertes</td>
+</tr>
+</tbody>
+</table>
+<p>Pour la carte, utilisez latitude et longitude de <code>fact_entraves</code> et définissez leurs catégories de données. Gardez la liste si la cartographie est désactivée dans votre établissement.</p>
+<p>Enregistrez <code>MobiliteIQ_Neon.pbix</code>. La livraison ne fournit pas de PBIX préfabriqué. Le fichier est exclu de Git par défaut; un membre coordonne le rapport final pour éviter cinq copies divergentes.</p>
+<h3 id="35-verifier-que-le-rapport-correspond-a-neon">3.5 Vérifier que le rapport correspond à Neon</h3>
+<p>Dans SQL Editor Neon :</p>
+<pre><code class="language-sql">SELECT count(DISTINCT event_id) FROM bi.fact_entraves;
+SELECT count(*) FROM bi.ops_alertes;
+SELECT max(collecte_utc) FROM bi.fact_entraves;
+</code></pre>
+<p>Dans Power BI, retirez les filtres puis cliquez <strong>Home → Refresh</strong>. Comparez les cartes avec les résultats SQL. Si aucun travail n'est présent, la date maximale de cette table peut être vide : utilisez <code>etat_sources</code> pour vérifier que la collecte travaux a bien réussi.</p>
+<h3 id="36-comprendre-les-deux-actualisations">3.6 Comprendre les deux actualisations</h3>
+<p><strong>Première actualisation :</strong> GitHub lance Python et met à jour Neon.<br />
+<strong>Deuxième actualisation :</strong> Power BI relit Neon et met à jour les visuels.</p>
+<p>Une base à jour ne rafraîchit pas automatiquement une copie Import déjà ouverte dans Desktop. Dans Desktop, utilisez <strong>Refresh</strong>. Pour automatiser le rapport :</p>
+<ol>
+<li>Vérifiez avec votre cégep les licences Power BI et l'espace partagé accessibles aux cinq membres.</li>
+<li>Publiez le rapport dans cet espace depuis Desktop.</li>
+<li>Dans Power BI Service, configurez une <strong>connexion cloud PostgreSQL</strong> avec l'hôte Neon, la base et le compte de lecture.</li>
+<li>Dans les paramètres du modèle sémantique, associez cette connexion et vérifiez les identifiants.</li>
+<li>Lancez <strong>Refresh now</strong>, vérifiez l'historique puis activez l'actualisation planifiée selon les créneaux disponibles.</li>
+</ol>
+<p>Le connecteur PostgreSQL prend en charge les connexions cloud. Une passerelle locale n'est normalement pas nécessaire si cette connexion cloud peut atteindre l'hôte public Neon; si votre organisation impose un autre chemin réseau, il faudra adapter la configuration et le tester. Ne supposez pas qu'une connexion Desktop réussie prouve que la connexion Service est prête.</p>
+<p>Une actualisation horaire Import dépend de la licence : la documentation consultée indique jusqu'à 8 actualisations planifiées par jour en Pro et jusqu'à 48 pour les offres PPU/Premium/capacités concernées. L'ingestion horaire peut continuer même si le rapport est actualisé moins souvent. <a href="https://learn.microsoft.com/en-us/power-bi/connect-data/refresh-scheduled-refresh">Configuration et limites Power BI</a>.</p>
+<h3 id="37-preparer-la-demonstration-et-le-modele">3.7 Préparer la démonstration et le modèle</h3>
+<p>Si l'historique réel est encore trop court, configurez <code>DATABASE_URL_DEMO</code>, puis lancez :</p>
+<pre><code class="language-bash">python -m mobiliteiq --db mobiliteiq_demo init-db
+python -m mobiliteiq --db mobiliteiq_demo demo
+python -m mobiliteiq --db mobiliteiq_demo eda
+python -m mobiliteiq --db mobiliteiq_demo train
+python -m mobiliteiq --db mobiliteiq_demo export
+</code></pre>
+<p>La démo crée 30 jours synthétiques et refuse de se réinitialiser si elle est déjà remplie. Son rapport doit porter la mention <strong>DONNÉES SYNTHÉTIQUES</strong>. Pour explorer cette base dans Power BI, utilisez un accès propriétaire de démo ou créez un rôle lecteur avec les droits adaptés à <code>mobiliteiq_demo</code>; les droits sur la base réelle ne sont pas automatiquement ceux de la démo.</p>
+<p>Pour les données réelles, après au moins dix jours et quarante heures distinctes :</p>
+<pre><code class="language-bash">python -m mobiliteiq eda
+python -m mobiliteiq train
+python -m mobiliteiq score
+</code></pre>
+<p>Ces commandes restent manuelles. Le modèle est conservé dans <code>models/</code> sur le poste qui l'entraîne; <code>score</code> doit retrouver ce fichier au chemin enregistré. Désignez un responsable et sauvegardez ce dossier. Le workflow GitHub fourni ne réentraîne pas et ne recalcule pas automatiquement les scores. La collecte et les indicateurs opérationnels fonctionnent sans modèle. Une anomalie statistique est un signal à examiner, pas une preuve de congestion ou de danger.</p>
+<h3 id="38-valider-et-entretenir-le-projet-a-cinq">3.8 Valider et entretenir le projet à cinq</h3>
+<table>
+<thead>
+<tr>
+<th>Vérification finale</th>
+<th>Preuve</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accès de l'équipe</td>
+<td>Cinq comptes personnels invités</td>
+</tr>
+<tr>
+<td>Base en ligne</td>
+<td>Connexion réussie et tables visibles dans Neon</td>
+</tr>
+<tr>
+<td>Quatre ingestions</td>
+<td>Réussites et horodatages dans etat_sources</td>
+</tr>
+<tr>
+<td>Collecte sans PC</td>
+<td>Exécution planifiée GitHub, puis nouvelles données dans Neon</td>
+</tr>
+<tr>
+<td>Qualité</td>
+<td>Erreurs visibles et dernier lot valide conservé</td>
+</tr>
+<tr>
+<td>Code testé</td>
+<td>CI verte sur le dernier commit fusionné</td>
+</tr>
+<tr>
+<td>Rapport</td>
+<td>Valeurs réconciliées avec SQL</td>
+</tr>
+<tr>
+<td>Actualisation</td>
+<td>Historique de refresh Power BI, ou actualisation Desktop démontrée</td>
+</tr>
+</tbody>
+</table>
+<p>Chaque semaine, consultez l'usage Neon et le stockage GitHub. La météo est téléchargée sur une fenêtre glissante de deux jours et historisée par collecte : les répétitions augmentent le volume. Aucune purge automatique n'est activée. Exportez et définissez une politique de conservation avant d'atteindre les quotas. Ne supprimez pas l'historique pour gagner de la place sans accord de l'équipe et sauvegarde.</p>
+<p>Pour un export de consultation : <code>python -m mobiliteiq export</code>. Ce sont des CSV des vues, pas une sauvegarde complète. Pour une sauvegarde PostgreSQL, utilisez un client <code>pg_dump</code> compatible avec la version du serveur et la connexion directe Neon. Les restaurations se testent dans une base distincte. Les données, les fichiers de modèle et les archives brutes demandent des sauvegardes adaptées.</p>
+<p>Pour arrêter les collectes : <strong>GitHub → Actions → Collecte Neon → menu → Disable workflow</strong>. Cela conserve la base. Pour appliquer une correction, fusionnez une Pull request testée vers <code>main</code> et lancez une collecte manuelle de contrôle.</p>
+<h3 id="depannage-simple">Dépannage simple</h3>
+<table>
+<thead>
+<tr>
+<th>Message ou symptôme</th>
+<th>Vérification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Configurer NEON_DATABASE_URL</td>
+<td>Créer le secret dans les paramètres du dépôt</td>
+</tr>
+<tr>
+<td>Connexion doit cibler mobiliteiq</td>
+<td>Dans Neon Connect, choisir la bonne base puis recopier l'URL</td>
+</tr>
+<tr>
+<td>Utiliser une connexion directe</td>
+<td>Désactiver Connection pooling et supprimer l'ancienne URL mutualisée</td>
+</tr>
+<tr>
+<td>Connexion cloud exige sslmode</td>
+<td>Recopier tous les paramètres sécurisés de l'URL Neon</td>
+</tr>
+<tr>
+<td>DATABASE_URL_DEMO ou TEST manquante</td>
+<td>Renseigner l'URL de cette base, jamais celle de la production</td>
+</tr>
+<tr>
+<td>Workflow rouge</td>
+<td>Ouvrir l'étape fautive et consulter les statuts dans Neon</td>
+</tr>
+<tr>
+<td>Pas de nouvelle exécution</td>
+<td>Vérifier main, activation du workflow, calendrier, quotas et activité du dépôt</td>
+</tr>
+<tr>
+<td>Tables Power BI vides</td>
+<td>Vérifier base, rôle, droits, filtres et actualisation</td>
+</tr>
+<tr>
+<td>Rapport Service ancien</td>
+<td>Vérifier connexion cloud et historique de refresh séparément des collectes</td>
+</tr>
+</tbody>
+</table>
+<p>Références officielles : <a href="https://neon.com/docs/manage/databases">Créer des bases Neon</a>, <a href="https://neon.com/docs/manage/organizations">organisations Neon</a>, <a href="https://neon.com/docs/connect/connection-pooling">connexions mutualisées et limites</a>, <a href="https://neon.com/pricing">offre Neon</a>, <a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule">GitHub Actions planifié</a>, <a href="https://learn.microsoft.com/en-us/power-query/connectors/postgresql">PostgreSQL dans Power BI</a>.</p></main></body></html>

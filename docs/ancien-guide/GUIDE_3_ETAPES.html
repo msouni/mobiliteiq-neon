@@ -1,0 +1,761 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MobilitéIQ — Guide PostgreSQL en 3 étapes</title><style>*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#f3f6fa;color:#1b2b3e;font:16px/1.65 system-ui,-apple-system,Segoe UI,sans-serif}header{background:#102f43;color:#fff;padding:28px max(24px,calc((100vw - 1060px)/2));border-bottom:6px solid #26b6ad}header small{color:#8bddd7;letter-spacing:2px}header div{font-size:30px;font-weight:700}nav{background:#fff;border-bottom:1px solid #d9e2e9;padding:14px 24px;display:flex;justify-content:center;gap:24px;position:sticky;top:0;z-index:2}nav a{font-weight:650;text-decoration:none;color:#0a716f}main{max-width:1060px;margin:30px auto;padding:45px 52px;background:white;border:1px solid #e1e7ec;border-radius:10px}h1{font-size:34px;line-height:1.2;color:#163b51}h2{font-size:28px;padding-top:20px;margin-top:60px;border-top:5px solid #27a9a3;scroll-margin-top:90px}h3{font-size:21px;color:#15566d;margin-top:35px}p,li{max-width:95ch}table{border-collapse:collapse;width:100%;margin:22px 0;font-size:14px;display:block;overflow-x:auto}th{background:#163b51;color:white;text-align:left}td,th{padding:11px 13px;border:1px solid #dce5ea;vertical-align:top}tr:nth-child(even){background:#f4f8fa}pre{background:#102f43;color:#e7f6fb;padding:20px;border-radius:7px;overflow-x:auto;line-height:1.5;font-size:14px}code{font-family:Consolas,monospace}p code,li code,td code{background:#edf2f5;border-radius:3px;padding:2px 4px;color:#15556c}a{color:#096c89;overflow-wrap:anywhere}strong{color:inherit}@media(max-width:700px){main{margin:0;padding:24px 18px;border:0;border-radius:0}nav{position:static;gap:10px;flex-wrap:wrap}h1{font-size:27px}h2{font-size:24px}header{padding:24px}}@media print{body{background:white;font-size:10pt}nav,header{display:none}main{border:0;margin:0;padding:0;max-width:none}h2{break-before:page}pre{white-space:pre-wrap;background:#f1f4f7;color:#111;border:1px solid #ccd}table{display:table;font-size:9pt}h3{break-after:avoid}tr{break-inside:avoid}a{color:inherit;text-decoration:none}}</style></head><body><header><small>GUIDE DE RÉALISATION • GROUPE 5</small><div>MobilitéIQ / PostgreSQL</div></header><nav><a href="#etape-1-preparer-postgresql-et-collecter-les-donnees">1 · Collecter</a><a href="#etape-2-analyser-les-donnees-et-construire-power-bi">2 · Analyser</a><a href="#etape-3-tester-versionner-et-mettre-en-service">3 · Mettre en service</a></nav><main><h1 id="mobiliteiq-guide-pratique-en-3-etapes">MobilitéIQ — guide pratique en 3 étapes</h1>
+<p><strong>PostgreSQL · Python dans WSL · VS Code · GitHub · Power BI</strong><br />
+Version pédagogique du 17 octobre 2026. Explications en français; menus Power BI et VS Code en anglais.</p>
+<p>Ce guide reprend le besoin d’affaires du PDF et les trois sprints du Groupe 5. Il remplace les commandes fragmentaires du journal <code>ProjectVersion, p.txt</code> par un nouveau socle de code cohérent. Ce journal ne contient pas les fichiers complets de l’ancien projet : ce paquet est une reconstruction pédagogique, pas une récupération de l’ancien dépôt. Ses anciens résultats « 62 tests réussis » ne sont pas des résultats de cette version.</p>
+<p><strong>But :</strong> aider un gestionnaire à repérer des situations routières inhabituelles dans la région de Québec, à voir les facteurs associés et à vérifier la fraîcheur des informations.</p>
+<table>
+<thead>
+<tr>
+<th>Étape</th>
+<th>Ce que vous obtenez</th>
+<th>Correspondance avec les sprints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1. Préparer et collecter</td>
+<td>PostgreSQL, sources contrôlées, collecte réelle, historique, premier commit</td>
+<td>Sprint 1, semaines 1–3, US01–06</td>
+</tr>
+<tr>
+<td>2. Analyser et visualiser</td>
+<td>Démonstration, KPI, analyse statistique, modèle d’anomalies, rapport Power BI</td>
+<td>Sprint 2, semaines 4–6, US07–12; amorce US13–14</td>
+</tr>
+<tr>
+<td>3. Tester et mettre en service</td>
+<td>Tests PostgreSQL, CI, promotion d’une version, collecte planifiée, monitoring et démonstration</td>
+<td>Sprint 3, semaines 7–9, US13–18</td>
+</tr>
+</tbody>
+</table>
+<p>Ce sont trois <strong>grandes étapes</strong>, pas trois commandes. Ne passez au bloc suivant qu’après son point de contrôle. L’historique réel se construit avec le temps; une démo synthétique permet de préparer la BI entre-temps.</p>
+<p><strong>Architecture retenue :</strong> les quatre sources publiques alimentent Python. Python archive les réponses brutes, valide les données et écrit les observations dans PostgreSQL. Les agrégats par secteur et par heure alimentent l’analyse et le modèle. Les vues <code>bi</code> exposent les données à Power BI. GitHub Actions teste le code; le planificateur Windows lance la collecte WSL.</p>
+<table>
+<thead>
+<tr>
+<th>Outil</th>
+<th>Où il fonctionne</th>
+<th>Son rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WSL Ubuntu</td>
+<td>Sur votre ordinateur Windows</td>
+<td>Exécute Python et le serveur PostgreSQL</td>
+</tr>
+<tr>
+<td>VS Code</td>
+<td>Windows, connecté au dossier WSL</td>
+<td>Permet de lire/modifier les fichiers et d’ouvrir le terminal</td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>Dans Ubuntu</td>
+<td>Conserve les observations, les analyses, les scores et les journaux</td>
+</tr>
+<tr>
+<td>Git / GitHub</td>
+<td>Git local dans WSL; dépôt en ligne</td>
+<td>Conserve les versions et exécute les tests automatiques</td>
+</tr>
+<tr>
+<td>Power BI Desktop</td>
+<td>Windows</td>
+<td>Lit les vues PostgreSQL et affiche le rapport</td>
+</tr>
+</tbody>
+</table>
+<p>Python/pandas convient au périmètre régional retenu. PySpark n’est pas nécessaire pour ce socle; son ajout demanderait une justification par le volume mesuré. Docker, SSIS et Visual Studio ne sont pas nécessaires pour exécuter le laboratoire local. Le conteneur PostgreSQL de la CI est géré par GitHub, sans installation Docker locale.</p>
+<h2 id="etape-1-preparer-postgresql-et-collecter-les-donnees">Étape 1 — Préparer PostgreSQL et collecter les données</h2>
+<h3 id="11-ouvrir-le-bon-environnement">1.1 Ouvrir le bon environnement</h3>
+<p>WSL, VS Code, GitHub et Power BI étant déjà installés, ne les réinstallez pas. Ouvrez <strong>Ubuntu</strong> depuis le menu Démarrer. Toutes les commandes Bash du guide s’exécutent dans Ubuntu ou dans le terminal WSL de VS Code. Les rares commandes PowerShell sont explicitement signalées.</p>
+<pre><code class="language-bash">mkdir -p ~/MobiliteIQ-Lab
+cd ~/MobiliteIQ-Lab
+explorer.exe .
+</code></pre>
+<p>Une fenêtre de l’Explorateur Windows s’ouvre sur ce dossier Linux. Copiez-y l’archive téléchargée <code>MobiliteIQ_PostgreSQL_3_etapes.zip</code>. Revenez dans Ubuntu :</p>
+<pre><code class="language-bash">sudo apt update
+sudo apt install -y python3 python3-venv python3-pip postgresql postgresql-client unzip git
+unzip MobiliteIQ_PostgreSQL_3_etapes.zip
+cd mobiliteiq-postgresql
+code .
+</code></pre>
+<p>Cette commande installe les composants manquants nécessaires au projet. Le ZIP se décompresse dans <code>mobiliteiq-postgresql</code>. Si ce dossier existe déjà, utilisez un autre dossier de travail; ne remplacez pas votre ancien projet.</p>
+<p>Dans VS Code, vérifiez que le coin inférieur gauche indique <strong>WSL: Ubuntu</strong> ou votre distribution Ubuntu. Puis <strong>Terminal → New Terminal</strong>.</p>
+<pre><code class="language-bash">pwd
+python3 --version
+git --version
+</code></pre>
+<p><strong>Contrôle :</strong> le chemin se termine par <code>MobiliteIQ-Lab/mobiliteiq-postgresql</code>. Python 3.12 est le choix recommandé pour correspondre à la CI. Si votre Ubuntu utilise une autre version, notez-la; ne supprimez pas le Python système pour la remplacer.</p>
+<h3 id="12-comprendre-les-fichiers-sans-tout-modifier">1.2 Comprendre les fichiers sans tout modifier</h3>
+<table>
+<thead>
+<tr>
+<th>Fichier/dossier</th>
+<th>Fonction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobiliteiq/core.py</code></td>
+<td>Règles de validation, dates, coordonnées et proximité géographique</td>
+</tr>
+<tr>
+<td><code>mobiliteiq/__main__.py</code></td>
+<td>Commandes, acquisition, historique, agrégats et monitoring</td>
+</tr>
+<tr>
+<td><code>mobiliteiq/analysis.py</code></td>
+<td>Statistiques et entraînement/scoring du modèle</td>
+</tr>
+<tr>
+<td><code>mobiliteiq/demo.py</code></td>
+<td>Génération de données explicitement synthétiques</td>
+</tr>
+<tr>
+<td><code>sql/schema.sql</code></td>
+<td>Tables PostgreSQL et vues utilisées par Power BI</td>
+</tr>
+<tr>
+<td><code>config/sources.json</code></td>
+<td>Territoire, champs des sources, fréquences et validation de l’audit</td>
+</tr>
+<tr>
+<td><code>.env.example</code></td>
+<td>Exemple de configuration locale, sans vrai mot de passe</td>
+</tr>
+<tr>
+<td><code>tests/</code></td>
+<td>Tests unitaires et tests nécessitant PostgreSQL</td>
+</tr>
+<tr>
+<td><code>.github/workflows/ci.yml</code></td>
+<td>Tests automatiques et paquet d’une version validée</td>
+</tr>
+<tr>
+<td><code>scripts/</code></td>
+<td>Exécution planifiée et promotion locale</td>
+</tr>
+<tr>
+<td><code>powerbi/Measures.dax</code></td>
+<td>Mesures à créer dans Power BI</td>
+</tr>
+</tbody>
+</table>
+<p>Il n’y a pas de fichier <code>.pbix</code> préfabriqué. Vous le construirez à l’étape 2 avec les instructions ci-dessous.</p>
+<h3 id="13-demarrer-postgresql-et-creer-trois-bases-separees">1.3 Démarrer PostgreSQL et créer trois bases séparées</h3>
+<pre><code class="language-bash">sudo service postgresql start
+pg_isready -h localhost -p 5432
+sudo -u postgres psql -c '\du'
+sudo -u postgres psql -c '\l'
+</code></pre>
+<p>Les deux dernières commandes montrent les comptes et les bases existants. Si le compte <code>mobiliteiq</code> n’existe pas :</p>
+<pre><code class="language-bash">sudo -u postgres createuser --login --pwprompt mobiliteiq
+</code></pre>
+<p>Choisissez un mot de passe local et conservez-le. La saisie peut rester invisible dans le terminal, c’est normal. Ce compte n’a pas besoin d’être superutilisateur.</p>
+<p>Créez uniquement les bases absentes de la liste :</p>
+<pre><code class="language-bash">sudo -u postgres createdb --owner=mobiliteiq mobiliteiq
+sudo -u postgres createdb --owner=mobiliteiq mobiliteiq_demo
+sudo -u postgres createdb --owner=mobiliteiq mobiliteiq_test
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Base</th>
+<th>Usage</th>
+<th>Précaution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mobiliteiq</code></td>
+<td>Collecte réelle et résultats réels</td>
+<td>Conserver l’historique</td>
+</tr>
+<tr>
+<td><code>mobiliteiq_demo</code></td>
+<td>Démonstration synthétique</td>
+<td>Ne pas présenter ses chiffres comme des observations réelles</td>
+</tr>
+<tr>
+<td><code>mobiliteiq_test</code></td>
+<td>Tests automatiques</td>
+<td>Les tests effacent ses tables de travail; aucune donnée de cours à y conserver</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Contrôle :</strong></p>
+<pre><code class="language-bash">psql -h localhost -U mobiliteiq -d mobiliteiq -W -c 'SELECT current_database(), current_user;'
+</code></pre>
+<p>Entrez le mot de passe choisi. Résultat attendu : base et utilisateur <code>mobiliteiq</code>. Si la connexion est refusée, vérifiez <code>pg_isready</code>, puis <code>sudo service postgresql status</code>. Si le mot de passe échoue, corrigez-le au lieu de désactiver l’authentification.</p>
+<h3 id="14-preparer-python-et-les-identifiants-locaux">1.4 Préparer Python et les identifiants locaux</h3>
+<pre><code class="language-bash">python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+cp .env.example .env
+code .env
+</code></pre>
+<p>Remplacez uniquement <code>REMPLACER_PAR_VOTRE_MOT_DE_PASSE</code> dans <code>.env</code> par votre mot de passe, sans guillemets. Les autres valeurs restent <code>localhost</code>, <code>5432</code>, <code>mobiliteiq</code>, <code>mobiliteiq</code>. Le fichier n’est pas envoyé à GitHub grâce à <code>.gitignore</code>. Ne publiez pas de capture de son contenu.</p>
+<pre><code class="language-bash">chmod 600 .env
+python -m mobiliteiq init-db
+python -m mobiliteiq --db mobiliteiq_demo init-db
+python -m mobiliteiq --db mobiliteiq_test init-db
+python -m pytest tests/test_core.py -q
+</code></pre>
+<p><strong>Contrôle :</strong> « Base et vues prêtes » pour les trois bases et tests unitaires réussis. Dans un nouveau terminal, réactivez l’environnement avec <code>source .venv/bin/activate</code>.</p>
+<h3 id="15-auditer-les-quatre-sources-reelles">1.5 Auditer les quatre sources réelles</h3>
+<p>L’audit vérifie ce que les services renvoient réellement. Il ne remplit pas encore les tables analytiques.</p>
+<pre><code class="language-bash">python -m mobiliteiq audit
+code data/audit.json
+</code></pre>
+<p>Lisez les sections <code>travaux</code>, <code>debit</code>, <code>rtss</code>, <code>meteo</code>. Chaque section doit contenir un nombre de lignes, des noms de champs et jusqu’à deux exemples. Une section <code>error</code> doit être corrigée avant validation.</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Champ identifiant configuré</th>
+<th>Champs utiles configurés</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Travaux MTMD</td>
+<td><code>identifiant</code></td>
+<td><code>routeAutoroute</code></td>
+</tr>
+<tr>
+<td>Débit MTMD</td>
+<td><code>ide_sectn_trafc</code></td>
+<td><code>rtss_debut</code>, <code>val_djma_annee_1</code></td>
+</tr>
+<tr>
+<td>RTSS MTMD</td>
+<td><code>ide_sous_r</code></td>
+<td><code>num_route</code></td>
+</tr>
+<tr>
+<td>GeoMet, <code>climate-hourly</code></td>
+<td><code>ID</code></td>
+<td><code>UTC_DATE</code>, <code>TEMP</code>, <code>PRECIP_AMOUNT</code>, <code>WIND_SPEED</code></td>
+</tr>
+</tbody>
+</table>
+<p>Ces champs ont été examinés sur des réponses des services lors de la préparation. Ils doivent être vérifiés à nouveau si les services changent. Un champ vide de DJMA reste manquant, il ne devient pas zéro. Le DJMA choisi est celui du champ année 1; documentez son année à partir de <code>djma_annee_1</code> dans les réponses brutes. Il n’y a pas de reprise silencieuse d’une année antérieure.</p>
+<p><strong>Deux détails techniques déjà traités :</strong> dans le fichier de configuration, le territoire est écrit longitude minimale, latitude minimale, longitude maximale, latitude maximale. Le code inverse ces axes uniquement pour le paramètre BBOX WFS 2.0 EPSG:4326 du MTMD. Les géométries GeoJSON restent longitude/latitude. GeoMet peut renvoyer <code>UTC_DATE</code> sans <code>Z</code>; ce champ explicitement UTC est traité en UTC.</p>
+<p>Le territoire rectangulaire <code>[-71.6, 46.6, -71.0, 47.1]</code> couvre une zone autour de Québec, y compris des secteurs voisins. C’est un périmètre de travail proposé, pas la frontière administrative exacte de la Capitale-Nationale. Faites-le valider par l’équipe et l’enseignant.</p>
+<p>Dans <code>config/sources.json</code>, remplacez <code>"validated": false</code> par <code>"validated": true</code> <strong>pour chaque source dont vous avez vérifié les champs et les exemples</strong>. Enregistrez. Ne modifiez pas les mots-clés JSON ni les virgules.</p>
+<p>Les dates MTMD <code>debut</code> et <code>fin</code> sont conservées dans le brut mais ne sont pas encore utilisées : leur format et leur fuseau doivent être documentés avant activation. Il serait incorrect d’ajouter arbitrairement <code>Z</code> à une heure locale. Le rapport de départ parle donc d’entraves <strong>présentes dans le dernier extrait</strong>, et non d’entraves forcément actives maintenant.</p>
+<p>Créez <code>docs/AUDIT_SOURCES.md</code> et notez pour chaque source : URL, licence, date de consultation, champs, unités, fréquence publiée, fréquence choisie, couverture, données manquantes et historique disponible. Pour GeoMet, observez le retard entre la collecte et <code>UTC_DATE</code> : les observations horaires publiées peuvent arriver tard. Ce décalage apparaîtra dans le monitoring.</p>
+<h3 id="16-lancer-la-collecte-et-comprendre-letl">1.6 Lancer la collecte et comprendre l’ETL</h3>
+<pre><code class="language-bash">python -m mobiliteiq run --force
+</code></pre>
+<p><strong>E — Extraire :</strong> Python interroge les services, suit la pagination et archive les réponses compressées dans <code>data/raw/</code>. Une empreinte SHA-256 accompagne chaque page pour en vérifier l’intégrité.</p>
+<p><strong>T — Transformer :</strong> les identifiants, dates, nombres et géométries sont contrôlés. Les doublons d’un même lot sont comptés. Les données hors territoire sont distinguées des rejets. Un lot trop invalide est refusé; le dernier lot valide reste disponible.</p>
+<p><strong>L — Charger :</strong> les observations valides sont ajoutées dans PostgreSQL avec leur identifiant de collecte. Les acquisitions successives restent distinctes. Le code calcule ensuite les comptes par secteur et par heure. Chaque lot et chaque rejet laissent une trace.</p>
+<p>Les observations ne sont pas supprimées pour remplacer tout l’historique. Un nouvel instantané du même événement est normal. Dans une même heure, l’agrégat conserve le dernier lot valide; les détails des autres lots restent dans les observations.</p>
+<p><strong>Contrôles :</strong></p>
+<pre><code class="language-bash">psql -h localhost -U mobiliteiq -d mobiliteiq -W -c &quot;SELECT source,status,received,accepted,rejected,filtered,duplicates FROM runs ORDER BY started_at DESC LIMIT 8;&quot;
+psql -h localhost -U mobiliteiq -d mobiliteiq -W -c &quot;SELECT count(*) FROM bi.fact_entraves;&quot;
+psql -h localhost -U mobiliteiq -d mobiliteiq -W -c &quot;SELECT * FROM bi.ops_alertes;&quot;
+</code></pre>
+<p>Attendez le statut <code>success</code> pour les quatre sources. Zéro entrave peut être légitime, mais doit être comparé à l’audit et au territoire. Un échec de la météo ne doit pas être interprété comme « pas de pluie ». Les valeurs indisponibles restent manquantes.</p>
+<p>Après environ 30 minutes :</p>
+<pre><code class="language-bash">python -m mobiliteiq run
+</code></pre>
+<p>Sans <code>--force</code>, le programme respecte les intervalles : travaux 30 minutes, météo 60 minutes, débit et RTSS 24 heures. Ces intervalles sont des choix du projet, pas la garantie que les producteurs ont publié de nouvelles données.</p>
+<p><strong>Preuve à conserver :</strong> capture du terminal avec les quatre sources, requête montrant plusieurs collectes datées et premier journal d’erreur ou rejet. N’utilisez pas les nombres d’exemple de l’ancien journal comme valeurs attendues.</p>
+<h3 id="17-faire-un-premier-commit-git">1.7 Faire un premier commit Git</h3>
+<p>Le dossier extrait est un nouveau projet. Vérifiez d’abord :</p>
+<pre><code class="language-bash">git status
+</code></pre>
+<p>Si Git indique que ce n’est pas un dépôt, initialisez-le :</p>
+<pre><code class="language-bash">git init -b main
+git config user.name &quot;Votre nom&quot;
+git config user.email &quot;Votre adresse GitHub ou adresse noreply&quot;
+git add .gitignore .env.example requirements.txt mobiliteiq sql config scripts tests powerbi docs GUIDE_3_ETAPES.md README.md .github
+git diff --cached --stat
+git status
+</code></pre>
+<p>Vérifiez que <code>.env</code>, <code>data</code>, <code>models</code>, <code>logs</code>, <code>.venv</code> ne figurent pas parmi les fichiers ajoutés.</p>
+<pre><code class="language-bash">git commit -m &quot;Initialiser MobiliteIQ PostgreSQL et la collecte&quot;
+git switch -c dev
+</code></pre>
+<p>Un <strong>commit</strong> conserve un état local du code. La branche <strong>dev</strong> sert aux modifications; <strong>main</strong> recevra les versions vérifiées. L’envoi à GitHub arrive à l’étape 3. Si vous travaillez déjà dans un dépôt, inspectez ses branches et son <code>git remote -v</code> au lieu de le réinitialiser.</p>
+<p><strong>Fin de l’étape 1 :</strong> vous devez pouvoir expliquer d’où viennent les données, retrouver le brut, voir au moins une collecte réelle réussie et vérifier que Git ignore vos identifiants.</p>
+<h2 id="etape-2-analyser-les-donnees-et-construire-power-bi">Étape 2 — Analyser les données et construire Power BI</h2>
+<h3 id="21-preparer-une-demonstration-sans-attendre-un-mois">2.1 Préparer une démonstration sans attendre un mois</h3>
+<pre><code class="language-bash">python -m mobiliteiq --db mobiliteiq_demo demo
+python -m mobiliteiq --db mobiliteiq_demo eda
+python -m mobiliteiq --db mobiliteiq_demo train
+python -m mobiliteiq --db mobiliteiq_demo export
+</code></pre>
+<p>La démo crée 30 jours de valeurs artificielles et un petit état courant de six points. Le module refuse de l’écrire dans la base réelle. S’il indique « Démo déjà initialisée », conservez-la et passez à <code>eda</code> ou <code>train</code> : il ne faut pas la recréer à chaque utilisation.</p>
+<p><strong>Contrôle :</strong></p>
+<pre><code class="language-bash">psql -h localhost -U mobiliteiq -d mobiliteiq_demo -W -c &quot;SELECT * FROM bi.info_projet;&quot; -c &quot;SELECT count(*) FROM bi.fact_secteur_heure;&quot; -c &quot;SELECT version,metrics FROM bi.modeles;&quot;
+</code></pre>
+<p>Le mode doit être <code>DEMONSTRATION SYNTHETIQUE</code>, l’historique non vide et un modèle enregistré. La présence d’un modèle ne constitue pas une validation de sa performance sur le terrain.</p>
+<h3 id="22-comprendre-les-tables-et-leurs-limites">2.2 Comprendre les tables et leurs limites</h3>
+<table>
+<thead>
+<tr>
+<th>Vue Power BI</th>
+<th>Ce que représente une ligne</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fact_entraves</code></td>
+<td>Une entrave présente dans le dernier lot valide</td>
+<td>Carte, axe et première observation</td>
+</tr>
+<tr>
+<td><code>historique_entraves</code></td>
+<td>Une entrave, avec première/dernière observation et durée observée</td>
+<td>Durées et historique par événement</td>
+</tr>
+<tr>
+<td><code>fact_secteur_heure</code></td>
+<td>Un secteur de grille à une heure UTC observée</td>
+<td>Évolution, météo associée, scores et anomalies</td>
+</tr>
+<tr>
+<td><code>dim_secteur</code></td>
+<td>Un code de secteur unique</td>
+<td>Filtre partagé entre les deux faits</td>
+</tr>
+<tr>
+<td><code>dim_date</code></td>
+<td>Une date locale unique</td>
+<td>Filtre de l’historique</td>
+</tr>
+<tr>
+<td><code>ops_ingestions</code></td>
+<td>Une exécution pour une source</td>
+<td>Volumes, erreurs et dates</td>
+</tr>
+<tr>
+<td><code>ops_indicateurs</code></td>
+<td>Un indicateur courant pour une source</td>
+<td>Fraîcheur, rejets et échecs</td>
+</tr>
+<tr>
+<td><code>ops_alertes</code></td>
+<td>Un indicateur actuellement en alerte</td>
+<td>Intervention</td>
+</tr>
+<tr>
+<td><code>info_projet</code></td>
+<td>Le nom de la base et son mode</td>
+<td>Bandeau réel/démo</td>
+</tr>
+<tr>
+<td><code>modeles</code></td>
+<td>Une version entraînée</td>
+<td>Seuil, période et métriques</td>
+</tr>
+</tbody>
+</table>
+<p>Les secteurs sont une grille de 0,1 degré, pas des quartiers officiels. Une ligne traversant plusieurs secteurs est affectée au point représentatif de sa partie située dans le territoire : ce choix simplifie le laboratoire, mais peut sous-représenter certains secteurs traversés.</p>
+<p>Le rapprochement utilise les géométries en projection métrique EPSG:32187 : RTSS et débit à 250 m maximum, météo à 50 km maximum et au plus 3 h avant le lot. Ces seuils sont des paramètres pédagogiques à valider sur une carte. Une route voisine n’est pas nécessairement la même route. Examinez les rapprochements et améliorez-les avec les identifiants RTSS avant une utilisation opérationnelle.</p>
+<p>Le modèle analytique enregistre le contexte disponible au moment de la collecte. Les observations météo arrivant après cette collecte ne sont pas automatiquement réinjectées dans les anciens agrégats; un traitement de rattrapage est une amélioration à prévoir.</p>
+<h3 id="23-lire-les-analyses-avant-de-regarder-les-anomalies">2.3 Lire les analyses avant de regarder les anomalies</h3>
+<p>Les fichiers <code>exports/mobiliteiq_demo/statistiques.csv</code>, <code>manquants.csv</code> et <code>correlations_spearman.csv</code> sont produits par <code>eda</code>. Ouvrez-les dans VS Code ou Excel.</p>
+<ol>
+<li>Regardez le taux de valeurs manquantes de chaque variable.</li>
+<li>Comparez minimum, médiane et maximum du nombre d’entraves présentes.</li>
+<li>Cherchez les heures ou secteurs qui se distinguent.</li>
+<li>Examinez les corrélations de Spearman entre variables, sans les présenter comme des causes.</li>
+<li>Rédigez trois constats et deux limites dans <code>docs/ANALYSE.md</code>.</li>
+</ol>
+<p>Exemple de formulation à adapter à vos résultats : « Certaines heures présentent davantage d’entraves dans ce secteur. Il faut vérifier la stabilité de ce constat sur un historique plus long. » N’écrivez pas « la pluie cause la congestion » : ces sources ne mesurent pas directement ce phénomène.</p>
+<h3 id="24-comprendre-lapprentissage-machine">2.4 Comprendre l’apprentissage machine</h3>
+<p>Le programme utilise <strong>Isolation Forest</strong>, un algorithme qui repère des combinaisons rares. Les variables candidates sont le nombre d’entraves présentes, le DJMA maximal associé, la température, les précipitations et le vent. Une variable n’est retenue que si elle est suffisamment renseignée et varie pendant l’entraînement.</p>
+<p>Le découpage se fait dans l’ordre du temps : environ 80 % des heures pour apprendre, puis 20 % pour examiner de nouvelles heures. Tous les secteurs d’une même heure restent du même côté. Les valeurs manquantes sont remplacées par des médianes apprises uniquement sur l’entraînement.</p>
+<p>Le seuil correspond au 97e percentile du score d’entraînement : environ les 3 % de scores les plus élevés servent de référence. Ce seuil n’est ni une vérité métier ni une garantie de 3 % d’alertes futures. La colonne <code>score</code> est un indice, pas une probabilité.</p>
+<p>Les métriques enregistrées comprennent le taux d’alertes sur la période suivante et une expérience de sensibilité où le nombre d’entraves est artificiellement augmenté. <strong>Ce test artificiel n’est pas une précision, un rappel ni un taux de réussite réel.</strong> Pour évaluer l’utilité métier, faites examiner un échantillon d’alertes et de cas normaux par l’équipe, consignez les décisions et calculez des métriques sur ces étiquettes si elles sont fiables.</p>
+<p>L’explication indique la variable qui s’éloigne le plus de la médiane en unités de MAD, une mesure robuste de dispersion. C’est une description du cas, pas une attribution causale du modèle. La variable dominante peut ne pas être celle qui a le plus influencé Isolation Forest.</p>
+<p>Sur les vraies données, attendez au moins 10 jours couvrant 40 heures distinctes; 3 à 4 semaines sont préférables pour un premier bilan. Ensuite :</p>
+<pre><code class="language-bash">python -m mobiliteiq eda
+python -m mobiliteiq train
+python -m mobiliteiq score
+</code></pre>
+<p><code>train</code> crée une nouvelle version et calcule les scores. <code>score</code> réutilise la dernière version. Le minimum de dix jours évite un entraînement presque vide; il ne garantit pas une couverture statistique suffisante. Le modèle global n’ajuste pas encore une normale par secteur et par heure de semaine : comparer une baseline saisonnière est une amélioration importante.</p>
+<h3 id="25-connecter-power-bi-a-postgresql">2.5 Connecter Power BI à PostgreSQL</h3>
+<p>Power BI Desktop reste ouvert sous <strong>Windows</strong>. Le serveur reste dans <strong>WSL</strong>. Commencez avec la démonstration.</p>
+<ol>
+<li><strong>Home → Get data → More…</strong>.</li>
+<li>Cherchez <strong>PostgreSQL database</strong>, puis <strong>Connect</strong>.</li>
+<li><strong>Server</strong> : <code>localhost:5432</code>.</li>
+<li><strong>Database</strong> : <code>mobiliteiq_demo</code>.</li>
+<li>Sélectionnez <strong>Import</strong>, puis <strong>OK</strong>.</li>
+<li>Choisissez <strong>Database</strong> pour l’authentification; saisissez <code>mobiliteiq</code> et le mot de passe local.</li>
+<li>Dans <strong>Navigator</strong>, sélectionnez les vues <code>bi</code> du tableau ci-dessus.</li>
+<li>Cliquez <strong>Transform Data</strong>; renommez les requêtes avec leur nom court, par exemple <code>fact_entraves</code> et <code>ops_alertes</code>.</li>
+<li>Vérifiez les types : dates/heures, nombres décimaux, booléens pour <code>anomaly</code> et <code>ok</code>. Puis <strong>Close &amp; Apply</strong>.</li>
+</ol>
+<p>Le fournisseur PostgreSQL est intégré aux versions modernes de Power BI Desktop; ne commencez pas par installer un pilote ODBC MongoDB. La connexion Windows vers un service WSL utilise normalement <code>localhost</code>. Si elle échoue, utilisez les contrôles de dépannage à l’étape 3.</p>
+<p>Pour le laboratoire local uniquement, si Power BI propose explicitement de continuer sans chiffrement sur <code>localhost</code>, cela concerne cette connexion locale. Une base distante doit utiliser une configuration TLS adaptée.</p>
+<h3 id="26-creer-les-relations-et-les-mesures">2.6 Créer les relations et les mesures</h3>
+<p>Dans <strong>Model view → Manage relationships → New</strong>, créez ces relations :</p>
+<table>
+<thead>
+<tr>
+<th>Côté « 1 »</th>
+<th>Côté « * »</th>
+<th>Filtrage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dim_secteur[sector]</code></td>
+<td><code>fact_entraves[sector]</code></td>
+<td>Single</td>
+</tr>
+<tr>
+<td><code>dim_secteur[sector]</code></td>
+<td><code>fact_secteur_heure[sector]</code></td>
+<td>Single</td>
+</tr>
+<tr>
+<td><code>dim_date[date_key]</code></td>
+<td><code>fact_secteur_heure[date_key]</code></td>
+<td>Single</td>
+</tr>
+<tr>
+<td><code>dim_date[date_key]</code></td>
+<td><code>historique_entraves[date_key]</code></td>
+<td>Single</td>
+</tr>
+<tr>
+<td><code>dim_secteur[sector]</code></td>
+<td><code>historique_entraves[sector]</code></td>
+<td>Single</td>
+</tr>
+</tbody>
+</table>
+<p>Ne reliez pas les deux tables de faits directement. Ne créez pas de relation entre <code>ops_*</code> et les faits. Dans <code>historique_entraves</code>, le filtre de date sélectionne la date de première observation. Le filtre de date concerne l’historique; la carte affiche le dernier état, même si vous sélectionnez une date passée. Ajoutez cette explication dans le rapport.</p>
+<p>Créez une table de mesures avec <strong>Home → Enter data</strong>, nommez-la <code>_Measures</code>, puis <strong>Load</strong>. Conservez sa colonne provisoire jusqu’à avoir créé une première mesure avec <strong>Modeling → New measure</strong>. Copiez une définition à la fois depuis <code>powerbi/Measures.dax</code>. Vous pourrez ensuite masquer la colonne provisoire, plutôt que supprimer toute la table.</p>
+<p>Les mesures fournies utilisent des virgules comme séparateurs d’arguments. Si votre installation exige le DAX local français, utilisez des points-virgules pour les arguments. Le langage d’affichage anglais de Power BI n’impose pas à lui seul les séparateurs DAX. Essayez d’abord la mesure simple <code>Entraves présentes</code>.</p>
+<p><strong>Contrôle :</strong> comparez sa carte au résultat SQL <code>SELECT count(*) FROM bi.fact_entraves;</code> sans filtre actif. Les nombres doivent correspondre.</p>
+<h3 id="27-construire-trois-pages-de-rapport">2.7 Construire trois pages de rapport</h3>
+<p><strong>Page « Situation actuelle »</strong></p>
+<ul>
+<li>Une carte <strong>Card</strong> : <code>Entraves présentes</code>.</li>
+<li>Une carte : <code>Nouvelles observées 24 h</code>.</li>
+<li>Une table : <code>event_id</code>, <code>axe</code>, <code>sector</code>, <code>collecte_utc</code>, <code>premiere_observation_utc</code>.</li>
+<li>Une carte géographique avec <code>latitude</code> et <code>longitude</code> de <code>fact_entraves</code>; dans <strong>Column tools → Data category</strong>, attribuez <strong>Latitude</strong> et <strong>Longitude</strong>, puis <strong>Don't summarize</strong>.</li>
+<li>Un filtre <strong>Slicer</strong> : <code>dim_secteur[sector]</code>; un filtre d’axe à partir de <code>fact_entraves[axe]</code>.</li>
+<li>Un bandeau visible à partir de <code>info_projet[mode]</code>.</li>
+</ul>
+<p>La carte Azure Maps dépend des paramètres de l’organisation et de l’accès réseau. Si elle est désactivée, gardez la table des coordonnées comme solution provisoire, puis faites valider l’activation du visuel cartographique pour la démonstration finale.</p>
+<p>La mesure « Nouvelles observées 24 h » ne compte que les entraves encore présentes dans le dernier lot et vues pour la première fois au cours des 24 dernières heures de collecte. Elle ne compte pas toutes celles apparues puis disparues dans cet intervalle. Conservez ce libellé précis ou étendez la vue avec l’ensemble de l’historique avant d’annoncer un KPI exhaustif.</p>
+<p><strong>Page « Historique et anomalies »</strong></p>
+<ul>
+<li><strong>Line chart</strong> : <code>heure_locale</code> sur l’axe X et moyenne de <code>n_presentes</code> sur Y.</li>
+<li><strong>Slicer</strong> : <code>dim_date[date_key]</code> et <code>dim_secteur[sector]</code>.</li>
+<li>Table : <code>heure_locale</code>, <code>sector</code>, <code>n_presentes</code>, <code>djma_max</code>, <code>temp_c</code>, <code>precip_mm</code>, <code>score</code>, <code>anomaly</code>, <code>explanation</code>.</li>
+<li>Filtre de table : <code>phase = evaluation_ou_nouveau</code> pour exclure les scores d’entraînement de l’évaluation.</li>
+<li>Mise en forme conditionnelle d’<code>anomaly</code> pour repérer les lignes à examiner.</li>
+</ul>
+<p>Ne sommez pas les nombres d’entraves de toutes les heures pour annoncer un nombre d’événements distincts : le même événement peut apparaître plusieurs fois. En changement d’heure, deux heures locales peuvent porter le même libellé; <code>hour_utc</code> reste la clé temporelle non ambiguë.</p>
+<p>Ajoutez aussi une table issue de <code>historique_entraves</code> : événement, axe, première observation, dernière observation, <code>duree_observee_h</code> et <code>presente_dernier_extrait</code>. Cette durée est la différence entre deux observations de votre collecte. Elle vaut zéro pour un événement vu une seule fois et constitue une durée observée minimale, pas la durée totale officielle. Une absence n’est pas une preuve de fin exacte.</p>
+<p><strong>Page « Qualité et exploitation »</strong></p>
+<ul>
+<li>Carte : <code>Alertes de qualité</code>.</li>
+<li>Table <code>ops_indicateurs</code> : source, nom, valeur, seuil, état <code>ok</code>, date de calcul.</li>
+<li>Table <code>ops_ingestions</code> : source, statut, reçues, acceptées, rejetées, filtrées, durée et erreur.</li>
+<li>Table des alertes ouvertes.</li>
+</ul>
+<p><strong>Contrôle :</strong> sélectionnez un secteur; la carte et son détail doivent se filtrer. Sélectionnez une date; l’historique doit changer. Vérifiez qu’une alerte n’est pas présentée comme une anomalie routière : une alerte d’exploitation peut simplement signaler une source trop ancienne.</p>
+<p>Enregistrez avec <strong>File → Save as</strong>, sous <code>MobiliteIQ_Demo.pbix</code> dans votre dossier Windows de travail. La création et la vérification visuelle du PBIX sont à faire dans Power BI; elles ne sont pas simulées dans le ZIP.</p>
+<h3 id="28-passer-aux-donnees-reelles">2.8 Passer aux données réelles</h3>
+<p>Faites une copie <code>MobiliteIQ_Reel.pbix</code>. Dans <strong>Transform data → Data source settings</strong>, modifiez la base vers <code>mobiliteiq</code>, conservez les mêmes vues et <strong>Refresh</strong>. Vérifiez le bandeau <code>DONNEES REELLES</code>, les dates et les volumes. Ne remplissez jamais une vue réelle avec la démo pour « avoir des chiffres ».</p>
+<p>Une actualisation <strong>Import</strong> est nécessaire pour voir les nouveaux lots. <strong>Refresh</strong> dans Desktop n’est pas une actualisation automatique permanente. Une publication dans Power BI Service avec une base locale demande une passerelle, les autorisations et une planification distincte; elle n’est pas déployée par ce paquet.</p>
+<p><strong>Fin de l’étape 2 :</strong> vous devez avoir une carte, des KPI réconciliés avec SQL, des observations statistiques, des scores interprétés avec leurs limites et un rapport qui distingue réel et démonstration.</p>
+<h2 id="etape-3-tester-versionner-et-mettre-en-service">Étape 3 — Tester, versionner et mettre en service</h2>
+<h3 id="31-executer-les-tests-postgresql-localement">3.1 Exécuter les tests PostgreSQL localement</h3>
+<p>Dans le terminal WSL, à la racine du projet, environnement Python activé :</p>
+<pre><code class="language-bash">RUN_PG_TESTS=1 python -m pytest -q
+</code></pre>
+<p>Le fichier de configuration de tests charge <code>.env</code>; les tests d’intégration utilisent explicitement <code>mobiliteiq_test</code>. Ils ne doivent jamais viser la base réelle.</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Vérification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Unitaire</td>
+<td>Identifiants, coordonnées, champs manquants, nombres, fuseaux, distances, découpage temporel</td>
+</tr>
+<tr>
+<td>Intégration PostgreSQL</td>
+<td>Historisation, doublons, lot invalide et conservation du dernier état valide</td>
+</tr>
+<tr>
+<td>Échec simulé</td>
+<td>Source indisponible, journal et alerte</td>
+</tr>
+<tr>
+<td>UAT automatisé partiel</td>
+<td>Événement visible avec coordonnées et indicateur de fraîcheur</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Contrôle :</strong> tous les tests passent, sans test PostgreSQL « skipped ». Sans <code>RUN_PG_TESTS=1</code>, les tests PostgreSQL sont volontairement sautés; ce n’est pas une preuve de fonctionnement de la base.</p>
+<p>Pour montrer le scénario d’échec :</p>
+<pre><code class="language-bash">RUN_PG_TESTS=1 python -m pytest tests/test_postgres.py::test_source_failure_is_visible -q -s
+</code></pre>
+<p>La panne est créée dans le test; il n’est pas nécessaire de casser votre vraie connexion.</p>
+<h3 id="32-publier-le-depot-sur-github-et-faire-fonctionner-la-ci">3.2 Publier le dépôt sur GitHub et faire fonctionner la CI</h3>
+<p>Sur GitHub, créez un nouveau dépôt <code>MobiliteIQ-PostgreSQL</code>, sans README ni licence ajoutés automatiquement. Copiez son URL HTTPS. Dans les commandes suivantes, remplacez <code>VOTRE_COMPTE</code> par votre compte.</p>
+<pre><code class="language-bash">git status
+git add config docs mobiliteiq tests sql scripts powerbi .github requirements.txt
+git diff --cached --stat
+git commit -m &quot;Valider les sources et préparer analyses et tests&quot;
+git remote -v
+</code></pre>
+<p>S’il n’existe pas de remote <code>origin</code> :</p>
+<pre><code class="language-bash">git remote add origin https://github.com/VOTRE_COMPTE/MobiliteIQ-PostgreSQL.git
+</code></pre>
+<p>S’il existe déjà, vérifiez son URL avant tout changement. Utilisez <code>git remote set-url origin ...</code> seulement si elle désigne le mauvais dépôt.</p>
+<pre><code class="language-bash">git push -u origin main
+git push -u origin dev
+</code></pre>
+<p>Authentifiez-vous avec le mécanisme GitHub proposé par votre installation; ne placez pas de jeton dans l’URL ou dans <code>.env.example</code>.</p>
+<p>Sur GitHub, ouvrez <strong>Actions → MobiliteIQ CI et paquet valide</strong>. Le workflow installe Python 3.12, démarre PostgreSQL 16 dans un service temporaire et exécute les tests. Son mot de passe <code>test_ci_only</code> ne concerne que cette base jetable.</p>
+<p>Créez ensuite <strong>Pull requests → New pull request</strong>, avec <strong>base: main</strong> et <strong>compare: dev</strong>. Une pull request permet de relire les changements avant fusion. Attendez les tests verts, puis <strong>Merge pull request</strong>. Cette fusion crée un nouvel état de <code>main</code>; vérifiez aussi son exécution CI.</p>
+<pre><code class="language-bash">git switch main
+git pull --ff-only origin main
+</code></pre>
+<p><strong>Preuves :</strong> captures des tests sur <code>dev</code>, de la PR vers <code>main</code> et du run correspondant au commit fusionné. Ne confondez pas une ancienne coche verte avec la validation du dernier code.</p>
+<h3 id="33-promouvoir-une-version-validee-cd-a-declenchement-manuel">3.3 Promouvoir une version validée — CD à déclenchement manuel</h3>
+<p>La <strong>CI</strong> vérifie le code. La <strong>CD</strong> promeut une version vérifiée vers l’environnement cible. Ici, le paquet est produit automatiquement après les tests d’un tag; la promotion dans WSL est lancée manuellement. GitHub n’accède pas directement à votre ordinateur.</p>
+<p>Avant le tag, assurez-vous que <code>config/sources.json</code> contient les quatre validations de sources et que les tests complets réussissent.</p>
+<pre><code class="language-bash">git tag v1.0.0
+git push origin v1.0.0
+</code></pre>
+<p>Attendez le workflow du tag. Dans le run réussi, téléchargez <strong>Artifacts → mobiliteiq-release</strong>. Extrayez le ZIP téléchargé dans un dossier <code>release-download</code> à la racine du projet; vous devez y voir <code>mobiliteiq-release.tar</code> et <code>SHA256SUMS</code>.</p>
+<p>Vérifiez l’intégrité dans ce dossier : le fichier de sommes contient le préfixe <code>dist/</code>, conformément au paquet CI. Créez cette disposition avant le contrôle :</p>
+<pre><code class="language-bash">cd ~/MobiliteIQ-Lab/mobiliteiq-postgresql/release-download
+mkdir -p dist
+cp mobiliteiq-release.tar dist/
+sha256sum -c SHA256SUMS
+cd ..
+</code></pre>
+<p>Le résultat doit être <code>OK</code>. Puis :</p>
+<pre><code class="language-bash">bash scripts/deploy.sh release-download/mobiliteiq-release.tar v1.0.0
+</code></pre>
+<p>Le script installe la version dans <code>~/mobiliteiq-releases/v1.0.0</code>, utilise les dépendances figées par la CI, partage les données locales, rejoue les tests dans <code>mobiliteiq_test</code>, initialise les tables manquantes, puis déplace le lien <code>~/mobiliteiq-current</code> vers la version. <code>.env</code> reste local. Ne lancez pas une collecte simultanée pendant une promotion.</p>
+<p><strong>Contrôle :</strong></p>
+<pre><code class="language-bash">readlink -f ~/mobiliteiq-current
+cat logs/deploy.log
+cd ~/mobiliteiq-current
+.venv/bin/python -m mobiliteiq run
+</code></pre>
+<p>Le lien doit viser la version attendue et le journal contenir sa date de promotion. Conservez les versions précédentes. Pour revenir au code d’une version existante, après avoir interrompu la planification :</p>
+<pre><code class="language-bash">ln -s &quot;$HOME/mobiliteiq-releases/v1.0.0&quot; &quot;$HOME/mobiliteiq-current.rollback&quot;
+mv -Tf &quot;$HOME/mobiliteiq-current.rollback&quot; &quot;$HOME/mobiliteiq-current&quot;
+</code></pre>
+<p>Cet exemple vise <code>v1.0.0</code>; choisissez une version réellement existante. Le retour du code n’annule pas les modifications de données. Avant une future migration destructive du schéma, prévoyez une migration versionnée et une restauration testée. Le schéma fourni ici est une initialisation additive, pas un outil complet de migrations.</p>
+<h3 id="34-planifier-la-collecte-depuis-windows">3.4 Planifier la collecte depuis Windows</h3>
+<p>Après avoir validé <code>run</code> manuellement, préparez le démarrage PostgreSQL. Dans WSL :</p>
+<pre><code class="language-bash">ps -p 1 -o comm=
+</code></pre>
+<p>Si la réponse est <code>systemd</code> :</p>
+<pre><code class="language-bash">sudo systemctl enable --now postgresql
+</code></pre>
+<p>Sinon, démarrez PostgreSQL avec <code>sudo service postgresql start</code> à chaque nouvelle session. Pour une exploitation autonome, faites configurer le démarrage du service avant de considérer la collecte comme permanente.</p>
+<p>Dans <strong>PowerShell Windows</strong>, vérifiez le nom exact de votre distribution :</p>
+<pre><code class="language-powershell">wsl -l -v
+</code></pre>
+<p>Ouvrez <strong>Task Scheduler</strong> (Planificateur de tâches), puis <strong>Create Task</strong> :</p>
+<ol>
+<li>Nom : <code>MobiliteIQ - collecte</code>.</li>
+<li><strong>Triggers → New</strong> : quotidien, répétition toutes les <strong>30 minutes</strong>, durée <strong>Indefinitely</strong>.</li>
+<li><strong>Actions → New → Start a program</strong>.</li>
+<li><strong>Program/script</strong> : <code>C:\Windows\System32\wsl.exe</code>.</li>
+<li><strong>Add arguments</strong> : la ligne suivante, en remplaçant <code>Ubuntu</code> si nécessaire :</li>
+</ol>
+<pre><code class="language-text">-d Ubuntu -- bash -lc &quot;cd ~/mobiliteiq-current &amp;&amp; bash scripts/run_once.sh&quot;
+</code></pre>
+<ol>
+<li><strong>Settings</strong> : ne pas démarrer une nouvelle instance si la tâche est déjà en cours; exécuter dès que possible si un démarrage planifié a été manqué.</li>
+<li>Testez avec <strong>Run</strong>, puis examinez <code>logs/pipeline.log</code> et le résultat de la tâche.</li>
+</ol>
+<pre><code class="language-bash">cd ~/mobiliteiq-current
+tail -n 40 logs/pipeline.log
+</code></pre>
+<p>Le code conserve les intervalles propres aux sources : le planificateur se réveille toutes les 30 minutes, mais le débit et RTSS ne sont interrogés qu’une fois par jour. Le verrou PostgreSQL évite deux traitements simultanés du projet dans une même base.</p>
+<p>Un ordinateur éteint ou endormi ne collecte pas normalement les instantanés manqués. Un rattrapage météo ne recrée pas les anciens états des travaux. Cette installation est une mise en service de laboratoire; pour du 24/7, utilisez un serveur toujours disponible et validez sauvegardes, accès et supervision.</p>
+<h3 id="35-surveiller-les-alertes-et-proteger-lhistorique">3.5 Surveiller les alertes et protéger l’historique</h3>
+<pre><code class="language-bash">.venv/bin/python -m mobiliteiq monitor
+</code></pre>
+<p>Un code de sortie 2 signifie qu’il existe une alerte, pas nécessairement que Python est défectueux. Consultez <code>bi.ops_alertes</code> et les messages associés dans <code>runs</code>.</p>
+<p>Les indicateurs suivent la fraîcheur de collecte, les échecs consécutifs, les rejets, ainsi que l’âge réel des observations météo. Le mécanisme de signalement fourni est le message terminal et la vue d’alertes Power BI. Il n’envoie pas d’email ni de message à l’équipe.</p>
+<p>La vue d’alertes est un état courant, pas un historique d’acquittement. Les anciens runs et rejets restent consultables. Une prochaine amélioration serait de conserver les ouvertures, résolutions et responsables de chaque alerte.</p>
+<p>Pour sauvegarder la base réelle avant une évolution importante :</p>
+<pre><code class="language-bash">mkdir -p ~/mobiliteiq-backups
+pg_dump -h localhost -U mobiliteiq -d mobiliteiq -W -Fc -f ~/mobiliteiq-backups/mobiliteiq_$(date +%Y%m%d_%H%M%S).dump
+</code></pre>
+<p>Conservez aussi <code>data/raw</code>, <code>models</code> et la configuration locale dans un emplacement protégé, distinct du dépôt Git. Vérifiez la taille chaque semaine :</p>
+<pre><code class="language-bash">du -sh data models logs
+psql -h localhost -U mobiliteiq -d mobiliteiq -W -c &quot;SELECT pg_size_pretty(pg_database_size(current_database()));&quot;
+</code></pre>
+<p>Politique proposée pour le cours : garder toutes les données pendant les neuf semaines, puis archiver le brut et la base. Aucune purge automatique n’est activée. La météo récupère une fenêtre glissante de deux jours; ses répétitions sont historisées par collecte et peuvent accroître le volume. Ajustez la rétention après mesure, sans perdre les preuves nécessaires.</p>
+<p>Après validation, vous pouvez créer un compte Power BI distinct, en lecture seule, et lui accorder uniquement <code>USAGE</code> sur <code>bi</code> et <code>SELECT</code> sur ses vues. Le compte de développement fourni est le propriétaire des tables : il convient au laboratoire, pas à une séparation complète des rôles de production.</p>
+<h3 id="36-faire-la-demonstration-finale-et-le-test-utilisateur">3.6 Faire la démonstration finale et le test utilisateur</h3>
+<p>Le scénario utilisateur est : « Je suis gestionnaire, je cherche une situation à examiner, je vérifie son contexte et je m’assure que les données sont suffisamment récentes. »</p>
+<table>
+<thead>
+<tr>
+<th>Action à montrer</th>
+<th>Preuve attendue</th>
+<th>Exigence couverte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Lancer une acquisition réelle</td>
+<td>Nouveau run horodaté et réponse brute conservée</td>
+<td>Collecte automatique, traçabilité</td>
+</tr>
+<tr>
+<td>Relancer après un intervalle</td>
+<td>Historique augmenté, pas de reconstruction complète</td>
+<td>Incrémentalité et historique</td>
+</tr>
+<tr>
+<td>Exécuter le test de panne</td>
+<td>Run échoué et alerte</td>
+<td>Robustesse et monitoring</td>
+</tr>
+<tr>
+<td>Actualiser Power BI</td>
+<td>Chiffres réconciliés avec SQL</td>
+<td>KPI et tableau de bord</td>
+</tr>
+<tr>
+<td>Filtrer un secteur puis une date</td>
+<td>Carte, détails et historique cohérents</td>
+<td>Exploration</td>
+</tr>
+<tr>
+<td>Examiner une anomalie</td>
+<td>Version, score, seuil, variables et explication</td>
+<td>ML interprétable</td>
+</tr>
+<tr>
+<td>Montrer les résultats d’analyse</td>
+<td>Statistiques, valeurs manquantes et limites</td>
+<td>Analyse exploratoire/avancée</td>
+</tr>
+<tr>
+<td>Montrer les tests et le tag validé</td>
+<td>CI verte et paquet de la bonne version</td>
+<td>Tests et CI</td>
+</tr>
+<tr>
+<td>Montrer le lien de version et le journal</td>
+<td>Version déployée dans WSL</td>
+<td>CD reproductible</td>
+</tr>
+<tr>
+<td>Demander à une autre personne d’utiliser le rapport</td>
+<td>Observation, résultat attendu/obtenu, décision</td>
+<td>UAT humain</td>
+</tr>
+</tbody>
+</table>
+<p>Dans <code>docs/UAT.md</code>, consignez la date, la base utilisée, la version du code et les résultats. L’UAT automatisé ne remplace pas cette vérification du rapport par une personne.</p>
+<p><strong>Livrables à préparer pour le cours :</strong> dépôt GitHub, guide, audit des quatre sources, rapport Power BI, analyse statistique, fiche modèle, captures des tests et CI/CD, journal de démonstration et limites. Le PDF ne donne pas de nom de fichier de remise obligatoire; adaptez les noms aux indications de l’enseignant.</p>
+<h3 id="37-depannage-cible">3.7 Dépannage ciblé</h3>
+<table>
+<thead>
+<tr>
+<th>Symptôme</th>
+<th>Vérification et action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>No module named mobiliteiq</code></td>
+<td>Revenir à la racine contenant le dossier <code>mobiliteiq</code>; réactiver <code>.venv</code></td>
+</tr>
+<tr>
+<td>PostgreSQL « connection refused »</td>
+<td><code>pg_isready</code>, puis démarrage du service; vérifier le port</td>
+</tr>
+<tr>
+<td>Mot de passe refusé</td>
+<td>Vérifier <code>.env</code> et le compte avec <code>psql -h localhost ... -W</code></td>
+</tr>
+<tr>
+<td><code>validated</code> / audit non validé</td>
+<td>Lire <code>data/audit.json</code>, vérifier les champs, passer la source concernée à <code>true</code></td>
+</tr>
+<tr>
+<td>Réponse XML/HTML au lieu de JSON</td>
+<td>Service indisponible ou paramètre WFS refusé; relancer l’audit et consulter le brut</td>
+</tr>
+<tr>
+<td>Tous les travaux sont hors territoire</td>
+<td>Vérifier longitude/latitude et l’ordre BBOX; ne pas inverser toutes les géométries</td>
+</tr>
+<tr>
+<td>Météo ancienne malgré collecte réussie</td>
+<td>Comparer <code>UTC_DATE</code> à l’heure de collecte; ne pas masquer l’alerte de retard</td>
+</tr>
+<tr>
+<td>Modèle impossible à entraîner</td>
+<td>Historique trop court ou variables constantes/manquantes; utiliser la démo pour apprendre</td>
+</tr>
+<tr>
+<td>Power BI ne joint pas <code>localhost:5432</code></td>
+<td>Vérifier d’abord la connexion <code>psql</code> dans WSL, puis <code>Test-NetConnection localhost -Port 5432</code> dans PowerShell</td>
+</tr>
+<tr>
+<td>Conflit avec un PostgreSQL Windows</td>
+<td>Vérifier quel serveur répond; utiliser un port local distinct configuré de manière cohérente</td>
+</tr>
+<tr>
+<td>Power BI conserve d’anciens identifiants</td>
+<td><strong>File → Options and settings → Data source settings</strong>, choisir la source et modifier les permissions</td>
+</tr>
+<tr>
+<td>Carte désactivée</td>
+<td>Vérifier les paramètres cartographiques de l’organisation; garder la table en attendant</td>
+</tr>
+<tr>
+<td>CI « skipped » pour PostgreSQL</td>
+<td>Vérifier <code>RUN_PG_TESTS=1</code> et le service PostgreSQL du workflow</td>
+</tr>
+<tr>
+<td>La collecte planifiée ne démarre pas</td>
+<td>Vérifier distribution WSL, lien <code>mobiliteiq-current</code>, service PostgreSQL et journal de tâche</td>
+</tr>
+</tbody>
+</table>
+<p>Si <code>localhost</code> ne fonctionne pas malgré un serveur WSL valide, examinez le réseau WSL et les règles de pare-feu ciblées; n’ouvrez pas PostgreSQL à tout Internet. Une exportation CSV avec <code>python -m mobiliteiq export</code> permet un travail provisoire dans Power BI (<strong>Get data → Text/CSV</strong>). Les booléens exportés par PostgreSQL peuvent être <code>t/f</code> : remplacez-les par <code>true/false</code> dans Power Query avant de les typer. Cet export manuel ne remplace pas l’acquisition automatisée.</p>
+<h3 id="38-ce-qui-est-fourni-et-ce-qui-reste-a-prouver">3.8 Ce qui est fourni et ce qui reste à prouver</h3>
+<p>Le paquet fournit du code, des tests, des commandes, des vues et une procédure. Il ne prouve pas que votre installation, votre rapport Power BI ou votre compte GitHub ont déjà été configurés.</p>
+<p>La reconstruction couvre une baseline : collecte des quatre sources, brut, validation, historique, agrégats, rapprochement géographique, EDA, Isolation Forest, scores versionnés, monitoring et promotion locale. Elle demande encore une validation terrain des rapprochements, une définition métier des entraves réellement actives et des durées, un audit de couverture des données et une évaluation métier du modèle. Ces points sont explicitement signalés pour ne pas présenter un prototype comme une solution de production terminée.</p>
+<p>Pour compléter les KPI de durée exigés par le sujet : documentez le fuseau des dates MTMD, testez leur conversion avec des cas hiver/été, puis distinguez durée prévue (<code>fin - debut</code>), âge depuis première observation et durée observée entre première et dernière présence. Une disparition entre deux collectes situe la fin dans un intervalle; elle ne donne pas une heure exacte. Le calcul de durée réalisée et le statut « actif » doivent tenir compte des horaires d’entrave, pas uniquement des dates du chantier. Faites valider cette définition avant de renommer les cartes.</p>
+<h3 id="references-de-travail">Références de travail</h3>
+<p>Les exigences pédagogiques proviennent du PDF MobilitéIQ et du PowerPoint Groupe 5 fournis. Les choix de seuils et d’implémentation de ce guide sont des propositions, pas des prescriptions de l’enseignant.</p>
+<ul>
+<li>Travaux routiers MTMD : https://www.donneesquebec.ca/recherche/dataset/travaux-routiers</li>
+<li>Débit de circulation : https://www.donneesquebec.ca/recherche/dataset/debit-de-circulation</li>
+<li>Réseau routier RTSS : https://www.donneesquebec.ca/recherche/dataset/reseau-routier-rtss</li>
+<li>GeoMet, observations horaires : https://api.weather.gc.ca/collections/climate-hourly?f=html</li>
+<li>Schéma GeoMet : https://api.weather.gc.ca/collections/climate-hourly/schema?f=html</li>
+<li>Connecteur PostgreSQL Power BI : https://learn.microsoft.com/power-query/connectors/postgresql</li>
+<li>Connexions réseau WSL : https://learn.microsoft.com/en-us/windows/wsl/networking</li>
+<li>PostgreSQL dans GitHub Actions : https://docs.github.com/en/actions/tutorials/use-containerized-services/create-postgresql-service-containers</li>
+</ul></main></body></html>

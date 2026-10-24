@@ -1,0 +1,26 @@
+{
+  "travaux": {
+    "status": 200,
+    "type": "FeatureCollection",
+    "sample_count": 1,
+    "missing_fields": []
+  },
+  "debit": {
+    "status": 200,
+    "type": "FeatureCollection",
+    "sample_count": 1,
+    "missing_fields": []
+  },
+  "rtss": {
+    "status": 200,
+    "type": "FeatureCollection",
+    "sample_count": 1,
+    "missing_fields": []
+  },
+  "meteo": {
+    "status": 200,
+    "type": "FeatureCollection",
+    "sample_count": 1,
+    "missing_fields": []
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "bbox": [
+    -71.6,
+    46.6,
+    -71.0,
+    47.1
+  ],
+  "sources": {
+    "travaux": {
+      "layer": "ms:chantiers_mtmdet",
+      "interval_minutes": 60,
+      "validated": false,
+      "fields": {
+        "id": "identifiant",
+        "route": "routeAutoroute",
+        "start": null,
+        "end": null
+      },
+      "validation_mode": "automatic",
+      "retry_minutes": 5,
+      "schedule_mode": "calendar"
+    },
+    "debit": {
+      "layer": "ms:circulation_routier",
+      "interval_minutes": 1440,
+      "validated": false,
+      "fields": {
+        "id": "ide_sectn_trafc",
+        "route": "rtss_debut",
+        "djma": "val_djma_annee_1"
+      },
+      "validation_mode": "automatic",
+      "retry_minutes": 5,
+      "schedule_mode": "calendar"
+    },
+    "rtss": {
+      "layer": "ms:bgr_v_sous_route_res_sup_act",
+      "interval_minutes": 1440,
+      "validated": false,
+      "fields": {
+        "id": "ide_sous_r",
+        "route": "num_route"
+      },
+      "validation_mode": "automatic",
+      "retry_minutes": 5,
+      "schedule_mode": "calendar"
+    },
+    "meteo": {
+      "collection": "climate-hourly",
+      "interval_minutes": 60,
+      "validated": false,
+      "fields": {
+        "id": "ID",
+        "time": "UTC_DATE",
+        "temp": "TEMP",
+        "precip": "PRECIP_AMOUNT",
+        "wind": "WIND_SPEED"
+      },
+      "validation_mode": "automatic",
+      "retry_minutes": 5,
+      "schedule_mode": "calendar"
+    }
+  }
+}

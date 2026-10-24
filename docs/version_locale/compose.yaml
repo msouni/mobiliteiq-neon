@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mobiliteiq
+      POSTGRES_USER: mobiliteiq
+      POSTGRES_PASSWORD: ${PGPASSWORD:?Configurez PGPASSWORD dans .env}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mobiliteiq -d mobiliteiq"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  ingestion:
+    build: .
+    restart: unless-stopped
+    stop_grace_period: 90s
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: mobiliteiq
+      PGUSER: mobiliteiq
+      PGPASSWORD: ${PGPASSWORD:?Configurez PGPASSWORD dans .env}
+    volumes:
+      - raw_data:/app/data
+      - models:/app/models
+      - exports:/app/exports
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  postgres_data:
+  raw_data:
+  models:
+  exports:
